@@ -329,8 +329,9 @@ let state = {current:'npcs',selected:null,editing:false};
 // ── PUBLIC CREDENTIALS (safe to embed — anon/read key only) ─────────────
 // These are set when you use Settings → Publish to Netlify.
 // Players use these to connect without any setup.
-const BAKED_URL = 'https://bpqnacunxxrtafdmaoid.supabase.co';
-const BAKED_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJwcW5hY3VueHhydGFmZG1hb2lkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzMxODc2NzUsImV4cCI6MjA4ODc2MzY3NX0.kCGsnnziHOkxeRhEQBTwPvMDNmG8YrQbe-e-kaHXvWQ';
+const BAKED_URL = '%%SUPABASE_URL%%';
+const BAKED_KEY = '%%SUPABASE_KEY%%';
+const BAKED_PASS = '%%PASS_HASH%%'; // hashed — safe to embed
 
 let SB_URL = '', SB_KEY = '';
 
@@ -418,7 +419,7 @@ async function saveSetup() {
 
   if (!url || !key) { setMsg('URL and API Key are required.', 'err'); return; }
   if (!url.startsWith('https://')) { setMsg('URL must start with https://', 'err'); return; }
-  if (!pass && !loadConfig()?.passHash) { setMsg('Please set a GM password.', 'err'); return; }
+  if (!pass && !loadConfig()?.passHash && !BAKED_PASS) { setMsg('Please set a GM password.', 'err'); return; }
 
   btn.disabled = true;
   setMsg('Testing connection…', 'info');
@@ -470,7 +471,8 @@ function publishFile() {
     .then(html => {
       const published = html
         .replace("'%%SUPABASE_URL%%'", "'" + cfg.url + "'")
-        .replace("'%%SUPABASE_KEY%%'", "'" + cfg.key + "'");
+        .replace("'%%SUPABASE_KEY%%'", "'" + cfg.key + "'")
+        .replace("'%%PASS_HASH%%'", "'" + (cfg.passHash || '') + "'");
       const blob = new Blob([published], {type: 'text/html'});
       const a = document.createElement('a');
       a.href = URL.createObjectURL(blob);
@@ -483,14 +485,14 @@ function publishFile() {
 
 // ── GM AUTH ─────────────────────────────────────────────────────────────
 async function promptGMAuth() {
-  const cfg = loadConfig();
-  if (!cfg?.passHash) return true;
+  const passHash = BAKED_PASS || loadConfig()?.passHash;
+  if (!passHash) return false; // no password set at all — deny by default
   const stored = localStorage.getItem('dh_gm_auth');
-  if (stored === cfg.passHash) return true;
+  if (stored === passHash) return true;
   const pass = prompt('Enter GM password:');
   if (!pass) return false;
   const h = await hashPass(pass);
-  if (h === cfg.passHash) { localStorage.setItem('dh_gm_auth', h); return true; }
+  if (h === passHash) { localStorage.setItem('dh_gm_auth', h); return true; }
   notify('Incorrect password.', 'error');
   return false;
 }
@@ -531,9 +533,9 @@ async function init() {
   SB_URL = resolvedUrl;
   SB_KEY = resolvedKey;
 
-  // Default to read-only. GM must explicitly authenticate.
+  // Use baked pass hash as source of truth — works in any browser, not just GM's
   const stored = localStorage.getItem('dh_gm_auth');
-  const passHash = cfg?.passHash;
+  const passHash = BAKED_PASS || cfg?.passHash;
   IS_GM = !!(passHash && stored && stored === passHash);
 
   showLoading(true);
