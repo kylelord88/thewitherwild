@@ -1,0 +1,775 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Daggerheart Campaign Codex</title>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel+Decorative:wght@400;700&family=Crimson+Pro:ital,wght@0,300;0,400;0,600;1,300;1,400&family=Rajdhani:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --ink:#1a1510;--parchment:#f5ede0;--gold:#c9963a;--gold-light:#e8b84b;--gold-dim:#8a6520;
+    --crimson:#8b1a1a;--teal:#1a5c5c;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{font-family:'Crimson Pro',Georgia,serif;background:var(--ink);color:var(--parchment);min-height:100vh;overflow-x:hidden;}
+  body::before{content:'';position:fixed;inset:0;pointer-events:none;z-index:0;
+    background:radial-gradient(ellipse 60% 40% at 20% 10%,rgba(201,150,58,.07) 0%,transparent 60%),
+               radial-gradient(ellipse 40% 60% at 80% 80%,rgba(139,26,26,.06) 0%,transparent 60%),
+               radial-gradient(ellipse 80% 80% at 50% 50%,#1a1510 0%,#0e0b07 100%);}
+  body::after{content:'';position:fixed;inset:0;opacity:.4;pointer-events:none;z-index:0;
+    background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.04'/%3E%3C/svg%3E");}
+  #app{position:relative;z-index:1;display:flex;flex-direction:column;min-height:100vh;}
+
+  /* SETUP */
+  .setup-overlay{position:fixed;inset:0;z-index:100;background:rgba(10,8,5,.97);display:flex;align-items:center;justify-content:center;padding:1.5rem;}
+  .setup-box{background:rgba(26,21,16,.98);border:1px solid rgba(201,150,58,.3);border-radius:6px;padding:2rem 2.5rem;max-width:540px;width:100%;box-shadow:0 0 60px rgba(201,150,58,.08);animation:fadeUp .3s ease;}
+  .setup-box h2{font-family:'Cinzel Decorative',serif;color:var(--gold);font-size:1.25rem;margin-bottom:.35rem;text-shadow:0 0 20px rgba(201,150,58,.3);}
+  .setup-box p{color:rgba(245,237,224,.55);font-size:.95rem;margin-bottom:1.4rem;line-height:1.6;}
+  .setup-box p a{color:var(--gold);text-decoration:none;border-bottom:1px solid rgba(201,150,58,.4);}
+  .setup-step{margin-bottom:1.1rem;}
+  .setup-step-label{font-family:'Rajdhani',sans-serif;font-size:.68rem;font-weight:700;letter-spacing:.25em;text-transform:uppercase;color:var(--gold-dim);margin-bottom:.3rem;}
+  .setup-input{width:100%;background:rgba(245,237,224,.05);border:1px solid rgba(201,150,58,.25);color:var(--parchment);font-family:'Crimson Pro',serif;font-size:.98rem;padding:.5rem .8rem;border-radius:3px;outline:none;transition:border-color .2s;}
+  .setup-input:focus{border-color:rgba(201,150,58,.6);background:rgba(245,237,224,.08);}
+  .setup-input::placeholder{color:rgba(245,237,224,.25);font-style:italic;}
+  .setup-hint{font-size:.78rem;color:rgba(245,237,224,.32);margin-top:.25rem;font-style:italic;}
+  .setup-btn{width:100%;margin-top:1rem;padding:.7rem;border:1px solid rgba(201,150,58,.4);border-radius:3px;cursor:pointer;font-family:'Rajdhani',sans-serif;font-size:.85rem;font-weight:700;letter-spacing:.2em;text-transform:uppercase;transition:all .2s;background:rgba(201,150,58,.18);color:var(--gold);}
+  .setup-btn:hover{background:rgba(201,150,58,.3);}
+  .setup-btn:disabled{opacity:.5;cursor:not-allowed;}
+  .setup-msg{font-size:.85rem;margin-top:.7rem;display:none;line-height:1.5;}
+  .setup-msg.err{color:#e07070;}
+  .setup-msg.info{color:rgba(201,150,58,.85);}
+  .setup-msg.ok{color:#80cf80;}
+
+  /* MODE BANNER */
+  .mode-banner{display:flex;align-items:center;justify-content:center;gap:.6rem;padding:.4rem 1rem;font-family:'Rajdhani',sans-serif;font-size:.7rem;font-weight:700;letter-spacing:.25em;text-transform:uppercase;}
+  .mode-banner.gm{background:rgba(139,26,26,.22);border-bottom:1px solid rgba(139,26,26,.3);color:#e09090;}
+  .mode-banner.player{background:rgba(26,92,92,.18);border-bottom:1px solid rgba(26,92,92,.3);color:#7ecfcf;}
+  .mode-banner a,.mode-banner button{color:inherit;text-decoration:none;border:none;background:none;cursor:pointer;font:inherit;letter-spacing:inherit;border-bottom:1px solid rgba(255,255,255,.2);}
+  .mode-banner a:hover,.mode-banner button:hover{border-bottom-color:currentColor;}
+  .mode-dot{width:6px;height:6px;border-radius:50%;display:inline-block;animation:pulse 2s infinite;}
+  .gm .mode-dot{background:#e07070;box-shadow:0 0 5px #e07070;}
+  .player .mode-dot{background:#7ecfcf;box-shadow:0 0 5px #7ecfcf;}
+  @keyframes pulse{0%,100%{opacity:1}50%{opacity:.35}}
+
+  /* HEADER */
+  header{padding:1.5rem 2.5rem 1.25rem;border-bottom:1px solid rgba(201,150,58,.2);background:linear-gradient(180deg,rgba(10,8,5,.9) 0%,transparent 100%);display:flex;align-items:center;justify-content:space-between;gap:1rem;flex-wrap:wrap;}
+  .header-title{display:flex;flex-direction:column;gap:.2rem;}
+  .header-title h1{font-family:'Cinzel Decorative',serif;font-size:clamp(1.1rem,2.5vw,1.75rem);font-weight:700;color:var(--gold);text-shadow:0 0 30px rgba(201,150,58,.4),0 2px 4px rgba(0,0,0,.8);letter-spacing:.04em;line-height:1.2;}
+  .header-title .subtitle{font-family:'Rajdhani',sans-serif;font-size:.72rem;letter-spacing:.3em;color:rgba(201,150,58,.45);text-transform:uppercase;}
+  .header-actions{display:flex;gap:.6rem;align-items:center;flex-wrap:wrap;}
+  .campaign-name-input{background:rgba(201,150,58,.07);border:1px solid rgba(201,150,58,.25);color:var(--parchment);font-family:'Crimson Pro',serif;font-size:.95rem;padding:.4rem .8rem;border-radius:3px;outline:none;width:190px;transition:border-color .2s;}
+  .campaign-name-input:focus{border-color:var(--gold);}
+  .campaign-name-input::placeholder{color:rgba(245,237,224,.3);font-style:italic;}
+  .campaign-name-display{font-family:'Crimson Pro',serif;font-size:.95rem;font-style:italic;color:rgba(245,237,224,.5);padding:.4rem 0;}
+  .sync-indicator{font-family:'Rajdhani',sans-serif;font-size:.7rem;letter-spacing:.15em;text-transform:uppercase;display:flex;align-items:center;gap:.35rem;color:rgba(245,237,224,.28);transition:color .3s;}
+  .sync-indicator.syncing{color:var(--gold);}
+  .sync-indicator.error{color:#e07070;}
+  .sync-indicator.ok{color:#80cf80;}
+  .sync-dot{width:5px;height:5px;border-radius:50%;background:currentColor;}
+  .sync-indicator.syncing .sync-dot{animation:pulse .8s infinite;}
+
+  /* NAV */
+  nav{display:flex;padding:0 2.5rem;background:rgba(0,0,0,.3);border-bottom:1px solid rgba(201,150,58,.15);overflow-x:auto;scrollbar-width:none;}
+  nav::-webkit-scrollbar{display:none;}
+  .nav-tab{display:flex;align-items:center;gap:.5rem;padding:.85rem 1.3rem;font-family:'Rajdhani',sans-serif;font-size:.82rem;font-weight:500;letter-spacing:.15em;text-transform:uppercase;color:rgba(245,237,224,.45);cursor:pointer;border-bottom:2px solid transparent;white-space:nowrap;transition:color .2s,border-color .2s;background:none;border-left:none;border-right:none;border-top:none;}
+  .nav-tab:hover{color:var(--gold-light);}
+  .nav-tab.active{color:var(--gold);border-bottom-color:var(--gold);}
+  .tab-count{background:rgba(201,150,58,.2);color:var(--gold-light);font-size:.68rem;padding:.1rem .45rem;border-radius:20px;font-weight:600;}
+
+  /* MAIN */
+  main{display:flex;flex:1;}
+  .sidebar{width:280px;min-width:230px;border-right:1px solid rgba(201,150,58,.12);display:flex;flex-direction:column;background:rgba(0,0,0,.2);overflow-y:auto;max-height:calc(100vh - 155px);}
+  .sidebar-search{padding:.9rem;border-bottom:1px solid rgba(201,150,58,.1);}
+  .search-input{width:100%;background:rgba(245,237,224,.05);border:1px solid rgba(201,150,58,.2);color:var(--parchment);font-family:'Crimson Pro',serif;font-size:.95rem;padding:.45rem .7rem;border-radius:3px;outline:none;transition:border-color .2s;}
+  .search-input:focus{border-color:rgba(201,150,58,.5);}
+  .search-input::placeholder{color:rgba(245,237,224,.25);font-style:italic;}
+  .sidebar-list{flex:1;overflow-y:auto;scrollbar-width:thin;scrollbar-color:rgba(201,150,58,.2) transparent;}
+  .sidebar-item{padding:.7rem 1rem;cursor:pointer;border-bottom:1px solid rgba(201,150,58,.07);transition:background .15s;display:flex;justify-content:space-between;align-items:flex-start;gap:.5rem;}
+  .sidebar-item:hover{background:rgba(201,150,58,.07);}
+  .sidebar-item.active{background:rgba(201,150,58,.13);border-left:2px solid var(--gold);}
+  .sidebar-item-name{font-size:1rem;font-weight:600;color:var(--parchment);line-height:1.3;}
+  .sidebar-item-sub{font-size:.78rem;color:rgba(245,237,224,.45);font-style:italic;margin-top:.1rem;}
+  .sidebar-item-badge{font-family:'Rajdhani',sans-serif;font-size:.63rem;font-weight:600;letter-spacing:.1em;text-transform:uppercase;padding:.15rem .4rem;border-radius:2px;white-space:nowrap;flex-shrink:0;}
+  .badge-ally    {background:rgba(26,92,92,.4);color:#7ecfcf;border:1px solid rgba(126,207,207,.3);}
+  .badge-hostile {background:rgba(139,26,26,.4);color:#e07070;border:1px solid rgba(224,112,112,.3);}
+  .badge-neutral {background:rgba(44,51,64,.6);color:#9ab0c8;border:1px solid rgba(154,176,200,.3);}
+  .badge-unknown {background:rgba(100,80,40,.4);color:#c8a86a;border:1px solid rgba(200,168,106,.3);}
+  .badge-active  {background:rgba(196,90,26,.3);color:#e8a070;border:1px solid rgba(232,160,112,.3);}
+  .badge-complete{background:rgba(26,92,26,.3);color:#80cf80;border:1px solid rgba(128,207,128,.3);}
+  .badge-failed  {background:rgba(80,26,26,.4);color:#c07070;border:1px solid rgba(192,112,112,.3);}
+  .badge-rumor   {background:rgba(60,50,80,.5);color:#b090e0;border:1px solid rgba(176,144,224,.3);}
+  .badge-place   {background:rgba(44,51,64,.6);color:#9ab0c8;border:1px solid rgba(154,176,200,.3);}
+  .btn-add-sidebar{margin:.7rem .9rem;padding:.55rem;background:rgba(201,150,58,.1);border:1px dashed rgba(201,150,58,.3);color:rgba(201,150,58,.7);font-family:'Rajdhani',sans-serif;font-size:.78rem;letter-spacing:.15em;text-transform:uppercase;cursor:pointer;border-radius:3px;width:calc(100% - 1.8rem);transition:all .2s;display:flex;align-items:center;justify-content:center;gap:.4rem;}
+  .btn-add-sidebar:hover{background:rgba(201,150,58,.18);border-color:rgba(201,150,58,.5);color:var(--gold);}
+
+  /* DETAIL */
+  .detail-panel{flex:1;padding:2rem 2.5rem;overflow-y:auto;max-height:calc(100vh - 155px);}
+  .empty-state{display:flex;flex-direction:column;align-items:center;justify-content:center;height:60vh;gap:1rem;opacity:.4;text-align:center;}
+  .empty-state-icon{font-size:3rem;}
+  .empty-state-text{font-family:'Cinzel Decorative',serif;font-size:.95rem;color:var(--gold-dim);}
+  .detail-header{display:flex;justify-content:space-between;align-items:flex-start;gap:1rem;margin-bottom:1.5rem;padding-bottom:1.25rem;border-bottom:1px solid rgba(201,150,58,.2);flex-wrap:wrap;}
+  .detail-title-area{flex:1;min-width:0;}
+  .detail-title{font-family:'Cinzel Decorative',serif;font-size:clamp(1.1rem,2.5vw,1.6rem);color:var(--gold);text-shadow:0 0 20px rgba(201,150,58,.3);margin-bottom:.3rem;word-break:break-word;}
+  .detail-meta{font-family:'Rajdhani',sans-serif;font-size:.75rem;letter-spacing:.2em;color:rgba(245,237,224,.4);text-transform:uppercase;display:flex;gap:1rem;flex-wrap:wrap;align-items:center;}
+  .detail-actions{display:flex;gap:.5rem;flex-shrink:0;}
+  .gm-section{margin-top:.5rem;border:1px solid rgba(139,26,26,.3);border-radius:4px;padding:1rem;background:rgba(139,26,26,.05);position:relative;}
+  .gm-section-label{position:absolute;top:-.6rem;left:.75rem;font-family:'Rajdhani',sans-serif;font-size:.62rem;font-weight:700;letter-spacing:.2em;text-transform:uppercase;color:#c07070;background:#100c08;padding:0 .35rem;}
+  .btn{font-family:'Rajdhani',sans-serif;font-size:.76rem;font-weight:600;letter-spacing:.15em;text-transform:uppercase;padding:.42rem .85rem;border-radius:3px;cursor:pointer;transition:all .2s;border:1px solid transparent;display:flex;align-items:center;gap:.3rem;}
+  .btn-edit  {background:rgba(201,150,58,.12);border-color:rgba(201,150,58,.3);color:var(--gold);}
+  .btn-edit:hover{background:rgba(201,150,58,.22);border-color:var(--gold);}
+  .btn-delete{background:rgba(139,26,26,.15);border-color:rgba(139,26,26,.3);color:#e07070;}
+  .btn-delete:hover{background:rgba(139,26,26,.28);}
+  .btn-save  {background:rgba(26,92,26,.25);border-color:rgba(80,180,80,.35);color:#80cf80;}
+  .btn-save:hover{background:rgba(26,92,26,.4);}
+  .btn-cancel{background:rgba(60,60,60,.3);border-color:rgba(120,120,120,.25);color:rgba(245,237,224,.6);}
+  .btn-cancel:hover{background:rgba(80,80,80,.4);}
+  .fields-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:1rem;margin-bottom:1.25rem;}
+  .field{display:flex;flex-direction:column;gap:.3rem;}
+  .field.full{grid-column:1/-1;}
+  .field-label{font-family:'Rajdhani',sans-serif;font-size:.68rem;font-weight:600;letter-spacing:.25em;text-transform:uppercase;color:var(--gold-dim);}
+  .field-value{font-size:1rem;color:var(--parchment);line-height:1.55;white-space:pre-wrap;word-break:break-word;}
+  .ornament-divider{display:flex;align-items:center;gap:.75rem;margin:1.1rem 0;color:rgba(201,150,58,.3);font-size:.9rem;}
+  .ornament-divider::before,.ornament-divider::after{content:'';flex:1;height:1px;background:rgba(201,150,58,.18);}
+  .form-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:1rem;margin-bottom:1.5rem;}
+  .form-field{display:flex;flex-direction:column;gap:.4rem;}
+  .form-field.full{grid-column:1/-1;}
+  .form-label{font-family:'Rajdhani',sans-serif;font-size:.68rem;font-weight:600;letter-spacing:.25em;text-transform:uppercase;color:var(--gold-dim);}
+  .form-label.gm-label{color:#c07070;}
+  .form-input,.form-select,.form-textarea{background:rgba(245,237,224,.05);border:1px solid rgba(201,150,58,.25);color:var(--parchment);font-family:'Crimson Pro',serif;font-size:.98rem;padding:.5rem .75rem;border-radius:3px;outline:none;transition:border-color .2s;width:100%;}
+  .form-input:focus,.form-select:focus,.form-textarea:focus{border-color:rgba(201,150,58,.55);background:rgba(245,237,224,.08);}
+  .form-input::placeholder,.form-textarea::placeholder{color:rgba(245,237,224,.25);font-style:italic;}
+  .form-select option{background:#1a1510;}
+  .form-textarea{resize:vertical;min-height:85px;line-height:1.55;}
+  .form-actions{display:flex;gap:.6rem;padding-top:1rem;border-top:1px solid rgba(201,150,58,.15);}
+  .tags-display{display:flex;flex-wrap:wrap;gap:.4rem;}
+  .tag{font-family:'Rajdhani',sans-serif;font-size:.7rem;font-weight:500;letter-spacing:.1em;padding:.2rem .55rem;border-radius:2px;background:rgba(44,51,64,.7);color:rgba(245,237,224,.6);border:1px solid rgba(245,237,224,.1);}
+  .loading-overlay{position:fixed;inset:0;z-index:50;background:rgba(10,8,5,.8);display:flex;align-items:center;justify-content:center;flex-direction:column;gap:1rem;}
+  .loading-spinner{width:36px;height:36px;border:2px solid rgba(201,150,58,.2);border-top-color:var(--gold);border-radius:50%;animation:spin .7s linear infinite;}
+  .loading-text{font-family:'Rajdhani',sans-serif;font-size:.78rem;letter-spacing:.2em;text-transform:uppercase;color:rgba(201,150,58,.6);}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  .notification{position:fixed;bottom:1.5rem;right:1.5rem;border:1px solid;font-family:'Rajdhani',sans-serif;font-size:.82rem;letter-spacing:.1em;padding:.6rem 1rem;border-radius:4px;z-index:200;animation:slideIn .25s ease,fadeOut .3s ease 2.2s forwards;}
+  .notification.success{background:rgba(26,92,26,.9);border-color:rgba(80,180,80,.4);color:#b0e8b0;}
+  .notification.error  {background:rgba(139,26,26,.9);border-color:rgba(224,112,112,.4);color:#f0a0a0;}
+  @keyframes slideIn{from{transform:translateY(1rem);opacity:0}to{transform:none;opacity:1}}
+  @keyframes fadeOut{from{opacity:1}to{opacity:0;pointer-events:none}}
+  @keyframes fadeUp {from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+  .sidebar-list::-webkit-scrollbar,.detail-panel::-webkit-scrollbar{width:4px;}
+  .sidebar-list::-webkit-scrollbar-thumb,.detail-panel::-webkit-scrollbar-thumb{background:rgba(201,150,58,.2);border-radius:2px;}
+  @media(max-width:680px){main{flex-direction:column;}.sidebar{width:100%;max-height:260px;border-right:none;border-bottom:1px solid rgba(201,150,58,.15);}.detail-panel{padding:1.25rem 1rem;}nav,header{padding-left:1rem;padding-right:1rem;}}
+  header,nav,main{animation:fadeUp .35s ease both;}nav{animation-delay:.07s;}main{animation-delay:.14s;}
+</style>
+</head>
+<body>
+<div id="app">
+
+<div class="setup-overlay" id="setupOverlay" style="display:none;">
+  <div class="setup-box">
+    <h2>⚔ Campaign Codex Setup</h2>
+    <p>Connect your Supabase database. You only do this once — credentials are saved in your browser.<br><br>
+    No Supabase account? <a href="https://supabase.com" target="_blank">Create a free one →</a></p>
+    <div class="setup-step">
+      <div class="setup-step-label">① Supabase Project URL</div>
+      <input class="setup-input" id="cfgUrl" type="text" placeholder="https://xxxxxxxxxxxx.supabase.co" autocomplete="off">
+      <div class="setup-hint">Project Settings → API → Project URL</div>
+    </div>
+    <div class="setup-step">
+      <div class="setup-step-label">② Anon / Public API Key</div>
+      <input class="setup-input" id="cfgKey" type="text" placeholder="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..." autocomplete="off">
+      <div class="setup-hint">Project Settings → API → anon public key</div>
+    </div>
+    <div class="setup-step">
+      <div class="setup-step-label">③ GM Password <span style="color:rgba(245,237,224,.35);font-weight:400;">(players won't need this)</span></div>
+      <input class="setup-input" id="cfgPass" type="password" placeholder="Choose a GM password…" autocomplete="new-password">
+      <div class="setup-hint">You'll enter this to unlock editing. Players just browse.</div>
+    </div>
+    <button class="setup-btn" id="setupBtn" onclick="saveSetup()">Save &amp; Connect</button>
+    <div class="setup-msg" id="setupMsg"></div>
+  </div>
+</div>
+
+<div class="loading-overlay" id="loadingOverlay" style="display:none;">
+  <div class="loading-spinner"></div>
+  <div class="loading-text">Loading Codex…</div>
+</div>
+
+<div class="mode-banner" id="modeBanner"></div>
+
+<header>
+  <div class="header-title">
+    <h1>⚔ Campaign Codex</h1>
+    <span class="subtitle" id="campaignSubtitle">Daggerheart Campaign Manager</span>
+  </div>
+  <div class="header-actions">
+    <span id="campaignNameWrap"></span>
+    <div class="sync-indicator" id="syncIndicator"><div class="sync-dot"></div><span id="syncText">—</span></div>
+    <button class="btn btn-edit" id="settingsBtn" onclick="showPasswordChange()" style="display:none;">⚙ Settings</button>
+    <button class="btn btn-edit" id="publishBtn" onclick="publishFile()" style="display:none;" title="Download file with credentials baked in for Netlify">⬇ Publish</button>
+  </div>
+</header>
+
+<nav id="mainNav">
+  <button class="nav-tab active" data-section="npcs" onclick="switchSection('npcs')">👤 NPCs <span class="tab-count" id="count-npcs">0</span></button>
+  <button class="nav-tab" data-section="factions" onclick="switchSection('factions')">⚑ Factions <span class="tab-count" id="count-factions">0</span></button>
+  <button class="nav-tab" data-section="locations" onclick="switchSection('locations')">🗺 Locations <span class="tab-count" id="count-locations">0</span></button>
+  <button class="nav-tab" data-section="quests" onclick="switchSection('quests')">📜 Quests <span class="tab-count" id="count-quests">0</span></button>
+  <button class="nav-tab" data-section="sessions" onclick="switchSection('sessions')">📖 Sessions <span class="tab-count" id="count-sessions">0</span></button>
+</nav>
+
+<main>
+  <aside class="sidebar">
+    <div class="sidebar-search"><input class="search-input" id="searchInput" type="text" placeholder="Search…" oninput="renderSidebar()"></div>
+    <div class="sidebar-list" id="sidebarList"></div>
+    <button class="btn-add-sidebar" id="addBtn" onclick="startNew()" style="display:none;">＋ Add New</button>
+  </aside>
+  <section class="detail-panel" id="detailPanel"></section>
+</main>
+</div>
+
+<!-- Password change modal -->
+<div class="setup-overlay" id="passOverlay" style="display:none;">
+  <div class="setup-box" style="max-width:400px;">
+    <h2 style="font-size:1.1rem;">🔑 Change GM Password</h2>
+    <p style="margin-bottom:1.2rem;">Enter a new password below. Your Supabase connection won't change.</p>
+    <div class="setup-step">
+      <div class="setup-step-label">New Password</div>
+      <input class="setup-input" id="newPass1" type="password" placeholder="New password…" autocomplete="new-password">
+    </div>
+    <div class="setup-step">
+      <div class="setup-step-label">Confirm Password</div>
+      <input class="setup-input" id="newPass2" type="password" placeholder="Confirm password…" autocomplete="new-password">
+    </div>
+    <div style="display:flex;gap:.6rem;margin-top:1rem;">
+      <button class="setup-btn" id="passBtn" onclick="saveNewPassword()" style="margin-top:0;">Save Password</button>
+      <button class="setup-btn" onclick="document.getElementById('passOverlay').style.display='none'" style="margin-top:0;background:rgba(60,60,60,.3);border-color:rgba(120,120,120,.3);color:rgba(245,237,224,.6);">Cancel</button>
+    </div>
+    <div class="setup-msg" id="passMsg"></div>
+  </div>
+</div>
+
+<script>
+// ── SCHEMA ─────────────────────────────────────────────────────────────
+const SCHEMA = {
+  npcs:{label:'NPC',plural:'NPCs',icon:'👤',badge:e=>e.attitude||'neutral',sub:e=>e.role||'',
+    fields:[
+      {key:'name',label:'Name',type:'text',required:true},
+      {key:'role',label:'Role / Occupation',type:'text'},
+      {key:'attitude',label:'Attitude',type:'select',options:['ally','neutral','hostile','unknown']},
+      {key:'faction',label:'Faction',type:'text'},
+      {key:'location',label:'Last Known Location',type:'text'},
+      {key:'appearance',label:'Appearance',type:'textarea'},
+      {key:'personality',label:'Personality & Mannerisms',type:'textarea'},
+      {key:'secret',label:'Secrets / Hidden Info',type:'textarea',gmOnly:true},
+      {key:'notes',label:'GM Notes',type:'textarea',gmOnly:true},
+      {key:'tags',label:'Tags (comma-separated)',type:'text'},
+    ]},
+  factions:{label:'Faction',plural:'Factions',icon:'⚑',badge:e=>e.standing||'neutral',sub:e=>e.type||'',
+    fields:[
+      {key:'name',label:'Name',type:'text',required:true},
+      {key:'type',label:'Type (guild, cult, nation…)',type:'text'},
+      {key:'standing',label:'Party Standing',type:'select',options:['ally','neutral','hostile','unknown']},
+      {key:'leader',label:'Leader / Key Figures',type:'text'},
+      {key:'hq',label:'Headquarters',type:'text'},
+      {key:'goal',label:'Goals & Motives',type:'textarea'},
+      {key:'resources',label:'Resources & Assets',type:'textarea'},
+      {key:'secrets',label:'Secrets & Hidden Agenda',type:'textarea',gmOnly:true},
+      {key:'relations',label:'Relationships to Other Factions',type:'textarea'},
+      {key:'notes',label:'GM Notes',type:'textarea',gmOnly:true},
+      {key:'tags',label:'Tags',type:'text'},
+    ]},
+  locations:{label:'Location',plural:'Locations',icon:'🗺',badge:e=>e.type?e.type.split(' ')[0]:'place',sub:e=>e.region||'',
+    fields:[
+      {key:'name',label:'Name',type:'text',required:true},
+      {key:'type',label:'Type (city, dungeon…)',type:'text'},
+      {key:'region',label:'Region / Territory',type:'text'},
+      {key:'controlledBy',label:'Controlled By',type:'text'},
+      {key:'atmosphere',label:'Atmosphere & Aesthetics',type:'textarea'},
+      {key:'description',label:'Description',type:'textarea'},
+      {key:'pointsOfInterest',label:'Points of Interest',type:'textarea'},
+      {key:'dangers',label:'Dangers & Encounters',type:'textarea',gmOnly:true},
+      {key:'secrets',label:'Hidden Secrets',type:'textarea',gmOnly:true},
+      {key:'notes',label:'GM Notes',type:'textarea',gmOnly:true},
+      {key:'tags',label:'Tags',type:'text'},
+    ]},
+  quests:{label:'Quest',plural:'Quests',icon:'📜',badge:e=>e.status||'rumor',sub:e=>e.giver||'',
+    fields:[
+      {key:'name',label:'Quest Name',type:'text',required:true},
+      {key:'status',label:'Status',type:'select',options:['rumor','active','complete','failed']},
+      {key:'giver',label:'Quest Giver',type:'text'},
+      {key:'location',label:'Location',type:'text'},
+      {key:'reward',label:'Reward',type:'text'},
+      {key:'hook',label:'Hook / How It Started',type:'textarea'},
+      {key:'objective',label:'Objectives',type:'textarea'},
+      {key:'complications',label:'Complications & Twists',type:'textarea',gmOnly:true},
+      {key:'progress',label:'Current Progress',type:'textarea'},
+      {key:'notes',label:'GM Notes',type:'textarea',gmOnly:true},
+      {key:'tags',label:'Tags',type:'text'},
+    ]},
+  sessions:{label:'Session',plural:'Sessions',icon:'📖',badge:e=>e.number?`#${e.number}`:'—',sub:e=>e.date||'',
+    fields:[
+      {key:'name',label:'Session Title',type:'text',required:true},
+      {key:'number',label:'Session Number',type:'text'},
+      {key:'date',label:'Date Played',type:'text'},
+      {key:'location',label:'In-World Location',type:'text'},
+      {key:'summary',label:'Summary',type:'textarea'},
+      {key:'highlights',label:'Highlights & Key Moments',type:'textarea'},
+      {key:'npcsEncountered',label:'NPCs Encountered',type:'textarea'},
+      {key:'questProgress',label:'Quest Progress',type:'textarea'},
+      {key:'cliffhanger',label:'Cliffhanger / Next Hook',type:'textarea'},
+      {key:'notes',label:'GM Notes',type:'textarea',gmOnly:true},
+      {key:'tags',label:'Tags',type:'text'},
+    ]},
+};
+
+// ── STATE ───────────────────────────────────────────────────────────────
+const CFG_KEY = 'dh_codex_cfg3';
+// Everyone is read-only by default. GM unlocks via password.
+let IS_GM = false;
+let db = {npcs:[],factions:[],locations:[],quests:[],sessions:[]};
+let state = {current:'npcs',selected:null,editing:false};
+// ── PUBLIC CREDENTIALS (safe to embed — anon/read key only) ─────────────
+// These are set when you use Settings → Publish to Netlify.
+// Players use these to connect without any setup.
+const BAKED_URL = '%%SUPABASE_URL%%';
+const BAKED_KEY = '%%SUPABASE_KEY%%';
+
+let SB_URL = '', SB_KEY = '';
+
+// ── SUPABASE REST API (no library needed) ───────────────────────────────
+async function sbFetch(method, path, body) {
+  const res = await fetch(SB_URL + '/rest/v1/' + path, {
+    method,
+    headers: {
+      'apikey': SB_KEY,
+      'Authorization': 'Bearer ' + SB_KEY,
+      'Content-Type': 'application/json',
+      'Prefer': method === 'POST' ? 'resolution=merge-duplicates,return=representation' : 'return=representation',
+    },
+    body: body ? JSON.stringify(body) : undefined,
+  });
+  const text = await res.text();
+  const data = text ? JSON.parse(text) : null;
+  if (!res.ok) throw new Error((data && (data.message || data.error)) || `HTTP ${res.status}`);
+  return data;
+}
+
+const sbSelect = (table, query='') => sbFetch('GET', table + '?' + query, null);
+const sbUpsert = (table, row) => sbFetch('POST', table, row);
+const sbDelete = (table, id) => sbFetch('DELETE', table + `?id=eq.${encodeURIComponent(id)}`, null);
+
+// ── CONFIG ──────────────────────────────────────────────────────────────
+function loadConfig() { try { return JSON.parse(localStorage.getItem(CFG_KEY)) || null; } catch { return null; } }
+function saveConfig(c) { localStorage.setItem(CFG_KEY, JSON.stringify(c)); }
+
+function showSetup() {
+  if (!IS_GM && loadConfig()?.passHash) return; // non-GM can't access setup
+  const cfg = loadConfig();
+  if (cfg) {
+    document.getElementById('cfgUrl').value = cfg.url || '';
+    document.getElementById('cfgKey').value = cfg.key || '';
+  }
+  setMsg('', '');
+  document.getElementById('setupOverlay').style.display = 'flex';
+}
+
+function showPasswordChange() {
+  document.getElementById('newPass1').value = '';
+  document.getElementById('newPass2').value = '';
+  const el = document.getElementById('passMsg');
+  el.style.display = 'none';
+  document.getElementById('passOverlay').style.display = 'flex';
+}
+
+async function saveNewPassword() {
+  const p1 = document.getElementById('newPass1').value;
+  const p2 = document.getElementById('newPass2').value;
+  const msg = document.getElementById('passMsg');
+  const btn = document.getElementById('passBtn');
+  msg.style.display = 'none';
+
+  if (!p1) { msg.textContent = 'Please enter a password.'; msg.className = 'setup-msg err'; msg.style.display = 'block'; return; }
+  if (p1 !== p2) { msg.textContent = 'Passwords do not match.'; msg.className = 'setup-msg err'; msg.style.display = 'block'; return; }
+
+  btn.disabled = true;
+  const cfg = loadConfig();
+  cfg.passHash = await hashPass(p1);
+  saveConfig(cfg);
+  // Update the session so GM stays logged in with new password
+  localStorage.setItem('dh_gm_auth', cfg.passHash);
+
+  msg.textContent = 'Password updated!';
+  msg.className = 'setup-msg ok';
+  msg.style.display = 'block';
+  btn.disabled = false;
+  setTimeout(() => { document.getElementById('passOverlay').style.display = 'none'; }, 900);
+}
+
+function setMsg(text, type) {
+  const el = document.getElementById('setupMsg');
+  el.textContent = text;
+  el.className = 'setup-msg' + (type ? ' ' + type : '');
+  el.style.display = text ? 'block' : 'none';
+}
+
+async function saveSetup() {
+  const url  = document.getElementById('cfgUrl').value.trim().replace(/\/$/, '');
+  const key  = document.getElementById('cfgKey').value.trim();
+  const pass = document.getElementById('cfgPass').value;
+  const btn  = document.getElementById('setupBtn');
+
+  if (!url || !key) { setMsg('URL and API Key are required.', 'err'); return; }
+  if (!url.startsWith('https://')) { setMsg('URL must start with https://', 'err'); return; }
+  if (!pass && !loadConfig()?.passHash) { setMsg('Please set a GM password.', 'err'); return; }
+
+  btn.disabled = true;
+  setMsg('Testing connection…', 'info');
+
+  // Test the connection using raw fetch — no library needed
+  try {
+    const res = await fetch(url + '/rest/v1/codex_entries?limit=1', {
+      headers: { 'apikey': key, 'Authorization': 'Bearer ' + key }
+    });
+    if (res.status === 401) throw new Error('Invalid API key.');
+    if (res.status === 404) throw new Error('URL not found — double-check your Project URL.');
+    // 406 or other errors might mean table doesn't exist yet, which is fine
+    if (!res.ok && res.status !== 406) {
+      const body = await res.text();
+      // code 42P01 = table doesn't exist — that's ok, we'll show SQL instructions
+      if (!body.includes('42P01')) throw new Error(`Server error ${res.status}`);
+    }
+  } catch(e) {
+    btn.disabled = false;
+    setMsg('Connection failed: ' + e.message, 'err');
+    return;
+  }
+
+  const cfg = { url, key };
+  if (pass) cfg.passHash = await hashPass(pass);
+  else cfg.passHash = loadConfig()?.passHash;
+  saveConfig(cfg);
+
+  btn.disabled = false;
+  setMsg('Connected!', 'ok');
+  setTimeout(() => {
+    document.getElementById('setupOverlay').style.display = 'none';
+    init();
+  }, 600);
+}
+
+async function hashPass(pass) {
+  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(pass));
+  return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2,'0')).join('');
+}
+
+// ── PUBLISH ─────────────────────────────────────────────────────────────
+function publishFile() {
+  const cfg = loadConfig();
+  if (!cfg?.url || !cfg?.key) { notify('No credentials saved yet.', 'error'); return; }
+  // Read this very page's HTML source and replace the placeholders
+  fetch(window.location.href)
+    .then(r => r.text())
+    .then(html => {
+      const published = html
+        .replace("'%%SUPABASE_URL%%'", "'" + cfg.url + "'")
+        .replace("'%%SUPABASE_KEY%%'", "'" + cfg.key + "'");
+      const blob = new Blob([published], {type: 'text/html'});
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = 'daggerheart-campaign.html';
+      a.click();
+      notify('Downloaded! Upload this file to Netlify.', 'success');
+    })
+    .catch(() => notify('Could not fetch page source.', 'error'));
+}
+
+// ── GM AUTH ─────────────────────────────────────────────────────────────
+async function promptGMAuth() {
+  const cfg = loadConfig();
+  if (!cfg?.passHash) return true;
+  const stored = localStorage.getItem('dh_gm_auth');
+  if (stored === cfg.passHash) return true;
+  const pass = prompt('Enter GM password:');
+  if (!pass) return false;
+  const h = await hashPass(pass);
+  if (h === cfg.passHash) { localStorage.setItem('dh_gm_auth', h); return true; }
+  notify('Incorrect password.', 'error');
+  return false;
+}
+
+async function toggleGM() {
+  if (IS_GM) {
+    localStorage.removeItem('dh_gm_auth');
+    IS_GM = false; state.editing = false; renderUI();
+  } else {
+    const ok = await promptGMAuth();
+    if (ok) { IS_GM = true; renderUI(); }
+  }
+}
+
+// ── INIT ────────────────────────────────────────────────────────────────
+async function init() {
+  const cfg = loadConfig();
+
+  // Resolve credentials: use saved config, or fall back to baked-in public credentials
+  const resolvedUrl = cfg?.url || BAKED_URL;
+  const resolvedKey = cfg?.key || BAKED_KEY;
+
+  if (!resolvedUrl || !resolvedKey) {
+    // No credentials baked in yet — only the GM can fix this
+    const stored = localStorage.getItem('dh_gm_auth');
+    const cfg2 = loadConfig();
+    if (cfg2?.passHash && stored !== cfg2.passHash) {
+      // Not authenticated as GM — show read-only empty state
+      document.getElementById('loadingOverlay').style.display = 'none';
+      document.getElementById('modeBanner').className = 'mode-banner player';
+      document.getElementById('modeBanner').innerHTML = '<span class="mode-dot"></span> PLAYER VIEW &nbsp;|&nbsp; <button onclick="toggleGM()" style="background:none;border:none;color:inherit;cursor:pointer;font:inherit;letter-spacing:inherit;border-bottom:1px solid rgba(255,255,255,.2);">GM Login</button>';
+      return;
+    }
+    showSetup();
+    return;
+  }
+
+  SB_URL = resolvedUrl;
+  SB_KEY = resolvedKey;
+
+  // Default to read-only. GM unlocks by entering password.
+  const stored = localStorage.getItem('dh_gm_auth');
+  const passHash = cfg?.passHash;
+  IS_GM = !passHash || (stored && stored === passHash);
+
+  showLoading(true);
+  try {
+    await loadAllData();
+  } catch(e) {
+    showLoading(false);
+    if (e.message && e.message.includes('42P01')) {
+      const sql = `CREATE TABLE codex_entries (\n  id text PRIMARY KEY,\n  section text NOT NULL,\n  data jsonb NOT NULL DEFAULT '{}',\n  created_at timestamptz DEFAULT now()\n);\n\nALTER TABLE codex_entries ENABLE ROW LEVEL SECURITY;\nCREATE POLICY "public read" ON codex_entries FOR SELECT USING (true);\nCREATE POLICY "public write" ON codex_entries FOR ALL USING (true);`;
+      alert('One more step! In Supabase go to:\nSQL Editor → New Query\n\nPaste and run this:\n\n' + sql + '\n\nThen refresh this page.');
+    } else {
+      notify('Load failed: ' + e.message, 'error');
+      showSetup();
+    }
+    return;
+  }
+  showLoading(false);
+  renderUI();
+}
+
+// ── DATA ────────────────────────────────────────────────────────────────
+async function loadAllData() {
+  const rows = await sbSelect('codex_entries', 'section=neq.__meta__&limit=1000');
+  for (const s of Object.keys(db)) db[s] = [];
+  for (const row of (rows || [])) {
+    if (db[row.section]) db[row.section].push({ id: row.id, ...row.data });
+  }
+  // Load campaign meta
+  try {
+    const meta = await sbSelect('codex_entries', 'id=eq.__meta__');
+    if (meta?.[0]?.data?.campaignName) window._campaignName = meta[0].data.campaignName;
+  } catch {}
+}
+
+async function upsertEntry(section, entry) {
+  setSyncState('syncing');
+  try {
+    const { id, ...data } = entry;
+    await sbUpsert('codex_entries', { id, section, data });
+    setSyncState('ok');
+  } catch(e) { setSyncState('error'); throw e; }
+}
+
+async function deleteEntryRemote(id) {
+  setSyncState('syncing');
+  try { await sbDelete('codex_entries', id); setSyncState('ok'); }
+  catch(e) { setSyncState('error'); throw e; }
+}
+
+async function saveCampaignMeta() {
+  const el = document.getElementById('campaignName');
+  if (!el) return;
+  const name = el.value;
+  document.getElementById('campaignSubtitle').textContent = name || 'Daggerheart Campaign Manager';
+  try { await sbUpsert('codex_entries', { id: '__meta__', section: '__meta__', data: { campaignName: name } }); } catch {}
+}
+
+// ── RENDER UI ───────────────────────────────────────────────────────────
+function renderUI() {
+  const banner = document.getElementById('modeBanner');
+  if (IS_GM) {
+    banner.className = 'mode-banner gm';
+    banner.innerHTML = `<span class="mode-dot"></span> GM MODE &nbsp;|&nbsp; <button onclick="toggleGM()">Lock to Player View</button>`;
+  } else {
+    banner.className = 'mode-banner player';
+    banner.innerHTML = `<span class="mode-dot"></span> PLAYER VIEW — read only &nbsp;|&nbsp; <button onclick="toggleGM()">GM Login</button>`;
+  }
+
+  const nameWrap = document.getElementById('campaignNameWrap');
+  if (IS_GM) {
+    nameWrap.innerHTML = `<input class="campaign-name-input" id="campaignName" type="text" placeholder="Campaign name…" value="${esc(window._campaignName||'')}">`;
+    document.getElementById('campaignName').addEventListener('input', saveCampaignMeta);
+    document.getElementById('settingsBtn').style.display = '';
+  document.getElementById('publishBtn').style.display = '';
+  } else {
+    nameWrap.innerHTML = `<span class="campaign-name-display">${esc(window._campaignName||'')}</span>`;
+    if (window._campaignName) document.getElementById('campaignSubtitle').textContent = window._campaignName;
+  }
+
+  document.getElementById('addBtn').style.display = IS_GM ? '' : 'none';
+  setSyncState('ok');
+  updateCounts();
+  renderSidebar();
+  renderDetail();
+}
+
+function setSyncState(s) {
+  const el = document.getElementById('syncIndicator');
+  const txt = document.getElementById('syncText');
+  el.className = 'sync-indicator ' + s;
+  txt.textContent = s==='syncing'?'Saving…':s==='error'?'Error':s==='ok'?'Synced':'—';
+  if (s==='ok') setTimeout(()=>{ el.className='sync-indicator'; txt.textContent='—'; }, 2500);
+}
+
+function showLoading(v) { document.getElementById('loadingOverlay').style.display = v ? 'flex' : 'none'; }
+
+function updateCounts() {
+  for (const s of Object.keys(SCHEMA)) {
+    const el = document.getElementById('count-'+s);
+    if (el) el.textContent = db[s].length;
+  }
+}
+
+function switchSection(section) {
+  state.current = section; state.selected = null; state.editing = false;
+  document.querySelectorAll('.nav-tab').forEach(t => t.classList.toggle('active', t.dataset.section===section));
+  document.getElementById('searchInput').value = '';
+  renderSidebar(); renderDetail();
+}
+
+function renderSidebar() {
+  const schema = SCHEMA[state.current];
+  const q = document.getElementById('searchInput').value.toLowerCase();
+  const items = db[state.current].filter(e => !q || Object.values(e).some(v => String(v).toLowerCase().includes(q)));
+  const list = document.getElementById('sidebarList');
+  if (!items.length) {
+    list.innerHTML = `<div style="padding:1.5rem 1rem;color:rgba(245,237,224,.3);font-style:italic;font-size:.9rem;text-align:center;">No entries yet</div>`;
+    return;
+  }
+  list.innerHTML = items.map(e => {
+    const badge = schema.badge(e);
+    const sub = schema.sub(e);
+    const badgeClass = 'badge-' + badge.toLowerCase().replace(/[^a-z]/g,'');
+    return `<div class="sidebar-item${e.id===state.selected?' active':''}" onclick="selectItem('${e.id}')">
+      <div>
+        <div class="sidebar-item-name">${esc(e.name||'Unnamed')}</div>
+        ${sub?`<div class="sidebar-item-sub">${esc(sub)}</div>`:''}
+      </div>
+      <span class="sidebar-item-badge ${badgeClass}">${badge}</span>
+    </div>`;
+  }).join('');
+}
+
+function selectItem(id) { state.selected=id; state.editing=false; renderSidebar(); renderDetail(); }
+function startNew()     { state.selected=null; state.editing=true;  renderSidebar(); renderDetail(); }
+
+function renderDetail() {
+  const panel = document.getElementById('detailPanel');
+  const schema = SCHEMA[state.current];
+  if (state.editing && IS_GM) {
+    const entry = state.selected ? db[state.current].find(e=>e.id===state.selected) : {};
+    panel.innerHTML = renderForm(entry||{}, schema); return;
+  }
+  if (!state.selected) {
+    panel.innerHTML = `<div class="empty-state"><div class="empty-state-icon">${schema.icon}</div><div class="empty-state-text">Select a ${schema.label}${IS_GM?' or add a new one':''}</div></div>`;
+    return;
+  }
+  const entry = db[state.current].find(e=>e.id===state.selected);
+  if (!entry) { panel.innerHTML=''; return; }
+  panel.innerHTML = renderView(entry, schema);
+}
+
+function renderView(entry, schema) {
+  const badge = schema.badge(entry);
+  const tags = entry.tags ? entry.tags.split(',').map(t=>t.trim()).filter(Boolean) : [];
+  const visible = schema.fields.filter(f => IS_GM || !f.gmOnly);
+  const mainFields = visible.filter(f => f.key!=='tags' && f.key!=='name' && f.type!=='textarea');
+  const pubText = visible.filter(f => f.type==='textarea' && !f.gmOnly);
+  const gmText  = IS_GM ? schema.fields.filter(f => f.type==='textarea' && f.gmOnly) : [];
+  const badgeClass = 'badge-' + badge.toLowerCase().replace(/[^a-z]/g,'');
+  return `
+    <div class="detail-header">
+      <div class="detail-title-area">
+        <div class="detail-title">${esc(entry.name||'Unnamed')}</div>
+        <div class="detail-meta"><span class="sidebar-item-badge ${badgeClass}">${badge}</span>${entry.date?`<span>${esc(entry.date)}</span>`:''}</div>
+      </div>
+      ${IS_GM?`<div class="detail-actions"><button class="btn btn-edit" onclick="startEdit()">✎ Edit</button><button class="btn btn-delete" onclick="deleteEntry()">✕ Delete</button></div>`:''}
+    </div>
+    ${mainFields.some(f=>entry[f.key])?`<div class="fields-grid">${mainFields.filter(f=>entry[f.key]).map(f=>`<div class="field"><div class="field-label">${f.label}</div><div class="field-value">${esc(entry[f.key])}</div></div>`).join('')}</div>`:''}
+    ${tags.length?`<div class="field" style="margin-bottom:1.25rem;"><div class="field-label">Tags</div><div class="tags-display">${tags.map(t=>`<span class="tag">${esc(t)}</span>`).join('')}</div></div>`:''}
+    ${pubText.map(f=>entry[f.key]?`<div class="ornament-divider">✦</div><div class="field full"><div class="field-label">${f.label}</div><div class="field-value">${esc(entry[f.key])}</div></div>`:'').join('')}
+    ${gmText.length&&gmText.some(f=>entry[f.key])?`<div class="ornament-divider">✦</div><div class="gm-section"><div class="gm-section-label">GM Eyes Only</div>${gmText.map(f=>entry[f.key]?`<div class="field full" style="margin-bottom:.75rem;"><div class="field-label">${f.label}</div><div class="field-value">${esc(entry[f.key])}</div></div>`:'').join('')}</div>`:''}
+  `;
+}
+
+function renderForm(entry, schema) {
+  const isNew = !entry.id;
+  const pub = schema.fields.filter(f=>!f.gmOnly);
+  const gm  = schema.fields.filter(f=>f.gmOnly);
+  const rf = f => {
+    const val = entry[f.key]||'';
+    if (f.type==='textarea') return `<div class="form-field full"><label class="form-label${f.gmOnly?' gm-label':''}">${f.label}</label><textarea class="form-textarea" id="f_${f.key}" rows="4">${esc(val)}</textarea></div>`;
+    if (f.type==='select')   return `<div class="form-field"><label class="form-label">${f.label}</label><select class="form-select" id="f_${f.key}">${f.options.map(o=>`<option value="${o}"${val===o?' selected':''}>${o[0].toUpperCase()+o.slice(1)}</option>`).join('')}</select></div>`;
+    return `<div class="form-field"><label class="form-label">${f.label}${f.required?' *':''}</label><input class="form-input" id="f_${f.key}" type="text" value="${esc(val)}" placeholder="${f.label}…"></div>`;
+  };
+  return `
+    <div class="detail-header"><div class="detail-title-area"><div class="detail-title" style="font-size:1.25rem;">${isNew?`New ${schema.label}`:`Edit: ${esc(entry.name||'')}`}</div></div></div>
+    <div class="form-grid">${pub.map(rf).join('')}</div>
+    ${gm.length?`<div class="gm-section" style="margin-bottom:1.5rem;"><div class="gm-section-label">GM Eyes Only</div><div class="form-grid" style="margin-bottom:0;">${gm.map(rf).join('')}</div></div>`:''}
+    <div class="form-actions"><button class="btn btn-save" onclick="saveForm('${entry.id||''}')">✓ Save</button><button class="btn btn-cancel" onclick="cancelEdit()">✕ Cancel</button></div>`;
+}
+
+function startEdit()  { if (!IS_GM) return; state.editing=true;  renderDetail(); }
+function cancelEdit() { state.editing=false; renderDetail(); }
+
+async function saveForm(existingId) {
+  if (!IS_GM) return;
+  const schema = SCHEMA[state.current];
+  const nameEl = document.getElementById('f_name');
+  if (!nameEl||!nameEl.value.trim()) { alert('Name is required.'); return; }
+  const entry = existingId ? { ...db[state.current].find(e=>e.id===existingId) } : { id: uid() };
+  for (const f of schema.fields) {
+    const el = document.getElementById('f_'+f.key);
+    if (el) entry[f.key] = el.tagName==='TEXTAREA' ? el.value : el.value.trim();
+  }
+  if (existingId) db[state.current] = db[state.current].map(e=>e.id===existingId?entry:e);
+  else db[state.current].push(entry);
+  state.selected = entry.id; state.editing = false;
+  updateCounts(); renderSidebar(); renderDetail();
+  try { await upsertEntry(state.current, entry); notify('Saved!','success'); }
+  catch(e) { notify('Save failed: '+e.message,'error'); }
+}
+
+async function deleteEntry() {
+  if (!IS_GM||!state.selected) return;
+  const entry = db[state.current].find(e=>e.id===state.selected);
+  if (!confirm(`Delete "${entry?.name||'this entry'}"?`)) return;
+  const deletedId = state.selected;
+  db[state.current] = db[state.current].filter(e=>e.id!==state.selected);
+  state.selected = null;
+  updateCounts(); renderSidebar(); renderDetail();
+  try { await deleteEntryRemote(deletedId); notify('Deleted.','success'); }
+  catch(e) { notify('Delete failed: '+e.message,'error'); }
+}
+
+// ── HELPERS ─────────────────────────────────────────────────────────────
+function uid() { return Date.now().toString(36)+Math.random().toString(36).slice(2); }
+function esc(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/\n/g,'<br>'); }
+function notify(msg, type='success') {
+  const el = document.createElement('div');
+  el.className = `notification ${type}`; el.textContent = msg;
+  document.body.appendChild(el); setTimeout(()=>el.remove(), 2800);
+}
+
+// ── BOOT ────────────────────────────────────────────────────────────────
+init();
+</script>
+</body>
+</html>
