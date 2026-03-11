@@ -127,7 +127,7 @@
   .field{display:flex;flex-direction:column;gap:.3rem;}
   .field.full{grid-column:1/-1;}
   .field-label{font-family:'Rajdhani',sans-serif;font-size:.68rem;font-weight:600;letter-spacing:.25em;text-transform:uppercase;color:var(--gold-dim);}
-  .field-value{font-size:1rem;color:var(--parchment);line-height:1.55;word-break:break-word;}
+  .field-value{font-size:1rem;color:var(--parchment);line-height:1.55;white-space:pre-wrap;word-break:break-word;}
   .ornament-divider{display:flex;align-items:center;gap:.75rem;margin:1.1rem 0;color:rgba(201,150,58,.3);font-size:.9rem;}
   .ornament-divider::before,.ornament-divider::after{content:'';flex:1;height:1px;background:rgba(201,150,58,.18);}
   .form-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:1rem;margin-bottom:1.5rem;}
@@ -158,19 +158,19 @@
   @media(max-width:680px){main{flex-direction:column;}.sidebar{width:100%;max-height:260px;border-right:none;border-bottom:1px solid rgba(201,150,58,.15);}.detail-panel{padding:1.25rem 1rem;}nav,header{padding-left:1rem;padding-right:1rem;}}
   header,nav,main{animation:fadeUp .35s ease both;}nav{animation-delay:.07s;}main{animation-delay:.14s;}
 
-  /* ── RICH TEXT TOOLBAR ── */
-  .textarea-wrap{display:flex;flex-direction:column;gap:0;}
+  .textarea-wrap{display:flex;flex-direction:column;}
   .fmt-toolbar{display:flex;gap:2px;padding:4px 6px;background:rgba(245,237,224,.04);border:1px solid rgba(201,150,58,.25);border-bottom:none;border-radius:3px 3px 0 0;}
-  .fmt-toolbar button{background:rgba(245,237,224,.06);border:1px solid rgba(201,150,58,.15);color:rgba(245,237,224,.7);font-family:'Crimson Pro',serif;font-size:.85rem;padding:2px 7px;border-radius:2px;cursor:pointer;transition:all .15s;line-height:1.4;}
-  .fmt-toolbar button:hover{background:rgba(201,150,58,.2);color:var(--gold);border-color:rgba(201,150,58,.4);}
+  .fmt-toolbar button{background:rgba(245,237,224,.06);border:1px solid rgba(201,150,58,.15);color:rgba(245,237,224,.7);font-size:.82rem;padding:2px 8px;border-radius:2px;cursor:pointer;line-height:1.4;}
+  .fmt-toolbar button:hover{background:rgba(201,150,58,.2);color:rgba(201,150,58,1);}
   .fmt-toolbar .sep{width:1px;background:rgba(201,150,58,.15);margin:2px 3px;}
   .textarea-wrap .form-textarea{border-radius:0 0 3px 3px;}
-  .field-value b{color:var(--gold-light);font-weight:600;}
-  .field-value i{color:rgba(245,237,224,.85);font-style:italic;}
-  .field-value ul{margin:.35rem 0 .35rem 1.25rem;}
-  .field-value ol{margin:.35rem 0 .35rem 1.5rem;}
-  .field-value li{margin:.15rem 0;line-height:1.5;}
-  .field-value hr{border:none;border-top:1px solid rgba(201,150,58,.2);margin:.6rem 0;}
+  .field-value b{font-weight:700;}
+  .field-value i{font-style:italic;opacity:.85;}
+  .field-value ul{margin:.3rem 0 .3rem 1.2rem;}
+  .field-value ol{margin:.3rem 0 .3rem 1.4rem;}
+  .field-value li{margin:.1rem 0;line-height:1.5;}
+  .field-value hr{border:none;border-top:1px solid rgba(201,150,58,.2);margin:.5rem 0;}
+  .field-value{white-space:normal;}
 </style>
 </head>
 <body>
@@ -506,7 +506,26 @@ async function saveSetup() {
   setMsg('Connected!', 'ok');
   setTimeout(() => {
     document.getElementById('setupOverlay').style.display = 'none';
-    init();
+    function fmtInsert(id, before, after) {
+  var ta = document.getElementById(id);
+  if (!ta) return;
+  var s = ta.selectionStart, e = ta.selectionEnd, sel = ta.value.slice(s,e);
+  ta.value = ta.value.slice(0,s) + before + (sel||'text') + after + ta.value.slice(e);
+  ta.selectionStart = s + before.length;
+  ta.selectionEnd = s + before.length + (sel||'text').length;
+  ta.focus();
+}
+function fmtBullet(id, type) {
+  var ta = document.getElementById(id);
+  if (!ta) return;
+  var s = ta.selectionStart;
+  var ls = ta.value.lastIndexOf('\n', s-1) + 1;
+  var pre = type === 'ul' ? '- ' : '1. ';
+  ta.value = ta.value.slice(0,ls) + pre + ta.value.slice(ls);
+  ta.selectionStart = ta.selectionEnd = ls + pre.length;
+  ta.focus();
+}
+init();
   }, 600);
 }
 
@@ -785,31 +804,31 @@ function renderDetail() {
   if (state.editing && IS_GM) {
     const entry = state.selected ? db[state.current].find(e=>e.id===state.selected) : {};
     panel.innerHTML = renderForm(entry||{}, schema);
-    // Inject toolbars after DOM is ready
-    schema.fields.filter(f=>f.type==='textarea').forEach(f => {
-      const ta = document.getElementById('f_'+f.key);
-      if (!ta) return;
-      const wrap = document.createElement('div');
+    schema.fields.filter(function(f){return f.type==='textarea';}).forEach(function(f) {
+      var ta = document.getElementById('f_'+f.key);
+      if (!ta || ta.parentNode.classList.contains('textarea-wrap')) return;
+      var wrap = document.createElement('div');
       wrap.className = 'textarea-wrap';
-      ta.parentNode.insertBefore(wrap, ta);
-      const toolbar = document.createElement('div');
-      toolbar.className = 'fmt-toolbar';
-      [
-        {html:'<b>B</b>', title:'Bold',    fn:()=>fmtInsert('f_'+f.key,'**','**')},
-        {html:'<i>I</i>', title:'Italic',  fn:()=>fmtInsert('f_'+f.key,'*','*')},
-        {sep:true},
-        {html:'• List',   title:'Bullets', fn:()=>fmtBullet('f_'+f.key,'ul')},
-        {html:'1. List',  title:'Numbered',fn:()=>fmtBullet('f_'+f.key,'ol')},
-        {sep:true},
-        {html:'—',        title:'Divider', fn:()=>fmtInsert('f_'+f.key,'\n---\n','')},
-      ].forEach(item => {
-        if (item.sep) { const s=document.createElement('div'); s.className='sep'; toolbar.appendChild(s); return; }
-        const btn = document.createElement('button');
-        btn.type='button'; btn.title=item.title; btn.innerHTML=item.html;
-        btn.addEventListener('click', item.fn);
-        toolbar.appendChild(btn);
+      var bar = document.createElement('div');
+      bar.className = 'fmt-toolbar';
+      var btns = [
+        ['<b>B</b>','Bold',     'fmtInsert("f_'+f.key+'","**","**")'],
+        ['<i>I</i>','Italic',   'fmtInsert("f_'+f.key+'","*","*")'],
+        null,
+        ['&bull; List','Bullets','fmtBullet("f_'+f.key+'","ul")'],
+        ['1. List','Numbered',  'fmtBullet("f_'+f.key+'","ol")'],
+        null,
+        ['&mdash;','Divider',   'fmtInsert("f_'+f.key+'","\n---\n","")'],
+      ];
+      btns.forEach(function(b) {
+        if (!b) { var s=document.createElement('div'); s.className='sep'; bar.appendChild(s); return; }
+        var btn=document.createElement('button');
+        btn.type='button'; btn.title=b[1]; btn.innerHTML=b[0];
+        btn.setAttribute('onclick', b[2]);
+        bar.appendChild(btn);
       });
-      wrap.appendChild(toolbar);
+      ta.parentNode.insertBefore(wrap, ta);
+      wrap.appendChild(bar);
       wrap.appendChild(ta);
     });
     return;
@@ -841,8 +860,8 @@ function renderView(entry, schema) {
     </div>
     ${mainFields.some(f=>entry[f.key])?`<div class="fields-grid">${mainFields.filter(f=>entry[f.key]).map(f=>`<div class="field"><div class="field-label">${f.label}</div><div class="field-value">${esc(entry[f.key])}</div></div>`).join('')}</div>`:''}
     ${tags.length?`<div class="field" style="margin-bottom:1.25rem;"><div class="field-label">Tags</div><div class="tags-display">${tags.map(t=>`<span class="tag">${esc(t)}</span>`).join('')}</div></div>`:''}
-    ${pubText.map(f=>entry[f.key]?`<div class="ornament-divider">✦</div><div class="field full"><div class="field-label">${f.label}</div><div class="field-value">${renderMd(entry[f.key])}</div></div>`:'').join('')}
-    ${gmText.length&&gmText.some(f=>entry[f.key])?`<div class="ornament-divider">✦</div><div class="gm-section"><div class="gm-section-label">GM Eyes Only</div>${gmText.map(f=>entry[f.key]?`<div class="field full" style="margin-bottom:.75rem;"><div class="field-label">${f.label}</div><div class="field-value">${renderMd(entry[f.key])}</div></div>`:'').join('')}</div>`:''}
+    ${pubText.map(f=>entry[f.key]?`<div class="ornament-divider">✦</div><div class="field full"><div class="field-label">${f.label}</div><div class="field-value">${esc(entry[f.key])}</div></div>`:'').join('')}
+    ${gmText.length&&gmText.some(f=>entry[f.key])?`<div class="ornament-divider">✦</div><div class="gm-section"><div class="gm-section-label">GM Eyes Only</div>${gmText.map(f=>entry[f.key]?`<div class="field full" style="margin-bottom:.75rem;"><div class="field-label">${f.label}</div><div class="field-value">${esc(entry[f.key])}</div></div>`:'').join('')}</div>`:''}
   `;
 }
 
@@ -852,8 +871,8 @@ function renderForm(entry, schema) {
   const gm  = schema.fields.filter(f=>f.gmOnly);
   const rf = f => {
     const val = entry[f.key]||'';
-    if (f.type==='select') return `<div class="form-field"><label class="form-label">${f.label}</label><select class="form-select" id="f_${f.key}">${f.options.map(o=>`<option value="${o}"${val===o?' selected':''}>${o[0].toUpperCase()+o.slice(1)}</option>`).join('')}</select></div>`;
-    if (f.type==='textarea') return `<div class="form-field full"><label class="form-label${f.gmOnly?' gm-label':''}">${f.label}</label><textarea class="form-textarea" id="f_${f.key}" rows="5">${esc(val)}</textarea></div>`;
+    if (f.type==='textarea') return `<div class="form-field full"><label class="form-label${f.gmOnly?' gm-label':''}">${f.label}</label><textarea class="form-textarea" id="f_${f.key}" rows="4">${esc(val)}</textarea></div>`;
+    if (f.type==='select')   return `<div class="form-field"><label class="form-label">${f.label}</label><select class="form-select" id="f_${f.key}">${f.options.map(o=>`<option value="${o}"${val===o?' selected':''}>${o[0].toUpperCase()+o.slice(1)}</option>`).join('')}</select></div>`;
     return `<div class="form-field"><label class="form-label">${f.label}${f.required?' *':''}</label><input class="form-input" id="f_${f.key}" type="text" value="${esc(val)}" placeholder="${f.label}…"></div>`;
   };
   return `
@@ -901,63 +920,36 @@ function uid() { return Date.now().toString(36)+Math.random().toString(36).slice
 function esc(s) {
   return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
-
-function renderMd(s) {
-  if (!s) return '';
-  const lines = String(s).split('\n');
-  let html = '', inUl = false, inOl = false;
-  for (const line of lines) {
-    const safe = line.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+function renderMd(raw) {
+  if (!raw) return '';
+  var lines = String(raw).split('\n'), html = '', ul = false, ol = false;
+  for (var i = 0; i < lines.length; i++) {
+    var line = lines[i]
+      .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
       .replace(/\*\*(.+?)\*\*/g,'<b>$1</b>').replace(/__(.+?)__/g,'<b>$1</b>')
-      .replace(/\*([^*\n]+?)\*/g,'<i>$1</i>').replace(/_([^_\n]+?)_/g,'<i>$1</i>');
-    const ulM = safe.match(/^[-*•]\s+(.*)/);
-    const olM = safe.match(/^\d+[.)]\s+(.*)/);
-    const hr  = /^---+$/.test(safe.trim());
+      .replace(/\*([^*]+?)\*/g,'<i>$1</i>').replace(/_([^_]+?)_/g,'<i>$1</i>');
+    var ulm = line.match(/^[-*]\s+(.*)/), olm = line.match(/^\d+[.)]\s+(.*)/), hr = /^---+$/.test(line.trim());
     if (hr) {
-      if (inUl){html+='</ul>';inUl=false;} if(inOl){html+='</ol>';inOl=false;}
+      if(ul){html+='</ul>';ul=false;} if(ol){html+='</ol>';ol=false;}
       html += '<hr>';
-    } else if (ulM) {
-      if(inOl){html+='</ol>';inOl=false;} if(!inUl){html+='<ul>';inUl=true;}
-      html += `<li>${ulM[1]}</li>`;
-    } else if (olM) {
-      if(inUl){html+='</ul>';inUl=false;} if(!inOl){html+='<ol>';inOl=true;}
-      html += `<li>${olM[1]}</li>`;
+    } else if (ulm) {
+      if(ol){html+='</ol>';ol=false;} if(!ul){html+='<ul>';ul=true;}
+      html += '<li>' + ulm[1] + '</li>';
+    } else if (olm) {
+      if(ul){html+='</ul>';ul=false;} if(!ol){html+='<ol>';ol=true;}
+      html += '<li>' + olm[1] + '</li>';
     } else {
-      if(inUl){html+='</ul>';inUl=false;} if(inOl){html+='</ol>';inOl=false;}
-      html += safe === '' ? '<br>' : safe + '<br>';
+      if(ul){html+='</ul>';ul=false;} if(ol){html+='</ol>';ol=false;}
+      html += line === '' ? '<br>' : line + '<br>';
     }
   }
-  if(inUl)html+='</ul>'; if(inOl)html+='</ol>';
+  if(ul)html+='</ul>'; if(ol)html+='</ol>';
   return html.replace(/<br>$/, '');
 }
 function notify(msg, type='success') {
   const el = document.createElement('div');
   el.className = `notification ${type}`; el.textContent = msg;
   document.body.appendChild(el); setTimeout(()=>el.remove(), 2800);
-}
-
-// ── TEXT FORMATTING HELPERS ─────────────────────────────────────────────
-function fmtInsert(id, before, after) {
-  const ta = document.getElementById(id);
-  if (!ta) return;
-  const start = ta.selectionStart, end = ta.selectionEnd;
-  const selected = ta.value.slice(start, end);
-  ta.value = ta.value.slice(0, start) + before + (selected||'text') + after + ta.value.slice(end);
-  ta.selectionStart = start + before.length;
-  ta.selectionEnd   = start + before.length + (selected||'text').length;
-  ta.focus();
-}
-
-function fmtBullet(id, type) {
-  const ta = document.getElementById(id);
-  if (!ta) return;
-  const start = ta.selectionStart;
-  const lineStart = ta.value.lastIndexOf('
-', start - 1) + 1;
-  const prefix = type === 'ul' ? '- ' : '1. ';
-  ta.value = ta.value.slice(0, lineStart) + prefix + ta.value.slice(lineStart);
-  ta.selectionStart = ta.selectionEnd = lineStart + prefix.length;
-  ta.focus();
 }
 
 // ── BOOT ────────────────────────────────────────────────────────────────
