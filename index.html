@@ -784,7 +784,35 @@ function renderDetail() {
   const schema = SCHEMA[state.current];
   if (state.editing && IS_GM) {
     const entry = state.selected ? db[state.current].find(e=>e.id===state.selected) : {};
-    panel.innerHTML = renderForm(entry||{}, schema); return;
+    panel.innerHTML = renderForm(entry||{}, schema);
+    // Inject toolbars after DOM is ready
+    schema.fields.filter(f=>f.type==='textarea').forEach(f => {
+      const ta = document.getElementById('f_'+f.key);
+      if (!ta) return;
+      const wrap = document.createElement('div');
+      wrap.className = 'textarea-wrap';
+      ta.parentNode.insertBefore(wrap, ta);
+      const toolbar = document.createElement('div');
+      toolbar.className = 'fmt-toolbar';
+      [
+        {html:'<b>B</b>', title:'Bold',    fn:()=>fmtInsert('f_'+f.key,'**','**')},
+        {html:'<i>I</i>', title:'Italic',  fn:()=>fmtInsert('f_'+f.key,'*','*')},
+        {sep:true},
+        {html:'• List',   title:'Bullets', fn:()=>fmtBullet('f_'+f.key,'ul')},
+        {html:'1. List',  title:'Numbered',fn:()=>fmtBullet('f_'+f.key,'ol')},
+        {sep:true},
+        {html:'—',        title:'Divider', fn:()=>fmtInsert('f_'+f.key,'\n---\n','')},
+      ].forEach(item => {
+        if (item.sep) { const s=document.createElement('div'); s.className='sep'; toolbar.appendChild(s); return; }
+        const btn = document.createElement('button');
+        btn.type='button'; btn.title=item.title; btn.innerHTML=item.html;
+        btn.addEventListener('click', item.fn);
+        toolbar.appendChild(btn);
+      });
+      wrap.appendChild(toolbar);
+      wrap.appendChild(ta);
+    });
+    return;
   }
   if (!state.selected) {
     panel.innerHTML = `<div class="empty-state"><div class="empty-state-icon">${schema.icon}</div><div class="empty-state-text">Select a ${schema.label}${IS_GM?' or add a new one':''}</div></div>`;
@@ -818,46 +846,6 @@ function renderView(entry, schema) {
   `;
 }
 
-function renderTextareaField(f, val) {
-  const k = f.key;
-  const el = document.createElement('div');
-  el.className = 'form-field full';
-  const label = document.createElement('label');
-  label.className = 'form-label' + (f.gmOnly ? ' gm-label' : '');
-  label.textContent = f.label;
-  el.appendChild(label);
-  const wrap = document.createElement('div');
-  wrap.className = 'textarea-wrap';
-  const toolbar = document.createElement('div');
-  toolbar.className = 'fmt-toolbar';
-  [
-    ['B', 'Bold',          () => fmtInsert('f_'+k,'**','**')],
-    ['I', 'Italic',        () => fmtInsert('f_'+k,'*','*')],
-    [null, null, null],
-    ['• List', 'Bullets',  () => fmtBullet('f_'+k,'ul')],
-    ['1. List', 'Numbered',() => fmtBullet('f_'+k,'ol')],
-    [null, null, null],
-    ['—', 'Divider',       () => fmtInsert('f_'+k,'\n---\n','')],
-  ].forEach(([label, title, handler]) => {
-    if (!label) { const sep = document.createElement('div'); sep.className='sep'; toolbar.appendChild(sep); return; }
-    const btn = document.createElement('button');
-    btn.type = 'button';
-    btn.title = title;
-    btn.innerHTML = label === 'B' ? '<b>B</b>' : label === 'I' ? '<i>I</i>' : label;
-    btn.addEventListener('click', handler);
-    toolbar.appendChild(btn);
-  });
-  const ta = document.createElement('textarea');
-  ta.className = 'form-textarea';
-  ta.id = 'f_' + k;
-  ta.rows = 5;
-  ta.value = val;
-  wrap.appendChild(toolbar);
-  wrap.appendChild(ta);
-  el.appendChild(wrap);
-  return el.outerHTML;
-}
-
 function renderForm(entry, schema) {
   const isNew = !entry.id;
   const pub = schema.fields.filter(f=>!f.gmOnly);
@@ -865,7 +853,7 @@ function renderForm(entry, schema) {
   const rf = f => {
     const val = entry[f.key]||'';
     if (f.type==='select') return `<div class="form-field"><label class="form-label">${f.label}</label><select class="form-select" id="f_${f.key}">${f.options.map(o=>`<option value="${o}"${val===o?' selected':''}>${o[0].toUpperCase()+o.slice(1)}</option>`).join('')}</select></div>`;
-    if (f.type==='textarea') return renderTextareaField(f, val);
+    if (f.type==='textarea') return `<div class="form-field full"><label class="form-label${f.gmOnly?' gm-label':''}">${f.label}</label><textarea class="form-textarea" id="f_${f.key}" rows="5">${esc(val)}</textarea></div>`;
     return `<div class="form-field"><label class="form-label">${f.label}${f.required?' *':''}</label><input class="form-input" id="f_${f.key}" type="text" value="${esc(val)}" placeholder="${f.label}…"></div>`;
   };
   return `
