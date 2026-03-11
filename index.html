@@ -236,6 +236,7 @@
   <button class="nav-tab" data-section="locations" onclick="switchSection('locations')">🗺 Locations <span class="tab-count" id="count-locations">0</span></button>
   <button class="nav-tab" data-section="quests" onclick="switchSection('quests')">📜 Quests <span class="tab-count" id="count-quests">0</span></button>
   <button class="nav-tab" data-section="sessions" onclick="switchSection('sessions')">📖 Sessions <span class="tab-count" id="count-sessions">0</span></button>
+  <button class="nav-tab" data-section="map" onclick="switchSection('map')">🗺 Map</button>
 </nav>
 
 <main>
@@ -780,6 +781,17 @@ function switchSection(section) {
   state.current = section; state.selected = null; state.editing = false;
   document.querySelectorAll('.nav-tab').forEach(t => t.classList.toggle('active', t.dataset.section===section));
   document.getElementById('searchInput').value = '';
+  const sidebar = document.querySelector('.sidebar');
+  const panel = document.getElementById('detailPanel');
+  if (section === 'map') {
+    sidebar.style.display = 'none';
+    panel.style.padding = '0';
+    panel.style.overflow = 'hidden';
+  } else {
+    sidebar.style.display = '';
+    panel.style.padding = '';
+    panel.style.overflow = '';
+  }
   renderSidebar(); renderDetail();
 }
 
