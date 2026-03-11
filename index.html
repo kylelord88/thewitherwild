@@ -203,7 +203,6 @@
     <span id="campaignNameWrap"></span>
     <div class="sync-indicator" id="syncIndicator"><div class="sync-dot"></div><span id="syncText">—</span></div>
     <button class="btn btn-edit" id="settingsBtn" onclick="showPasswordChange()" style="display:none;">⚙ Settings</button>
-    <button class="btn btn-edit" id="publishBtn" onclick="publishFile()" style="display:none;" title="Download file with credentials baked in for Netlify">⬇ Publish</button>
   </div>
 </header>
 
@@ -372,7 +371,7 @@ let state = {current:'npcs',selected:null,editing:false};
 // Players use these to connect without any setup.
 const BAKED_URL = 'https://bpqnacunxxrtafdmaoid.supabase.co';
 const BAKED_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJwcW5hY3VueHhydGFmZG1hb2lkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzMxODc2NzUsImV4cCI6MjA4ODc2MzY3NX0.kCGsnnziHOkxeRhEQBTwPvMDNmG8YrQbe-e-kaHXvWQ';
-const BAKED_PASS = '%%PASS_HASH%%'; // hashed — safe to embed
+const BAKED_PASS = ''; // set via GM login
 
 let SB_URL = '', SB_KEY = '';
 
@@ -500,28 +499,6 @@ async function saveSetup() {
 async function hashPass(pass) {
   const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(pass));
   return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2,'0')).join('');
-}
-
-// ── PUBLISH ─────────────────────────────────────────────────────────────
-function publishFile() {
-  const cfg = loadConfig();
-  if (!cfg?.url || !cfg?.key) { notify('No credentials saved yet.', 'error'); return; }
-  // Read this very page's HTML source and replace the placeholders
-  fetch(window.location.href)
-    .then(r => r.text())
-    .then(html => {
-      const published = html
-        .replace("'https://bpqnacunxxrtafdmaoid.supabase.co'", "'" + cfg.url + "'")
-        .replace("'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJwcW5hY3VueHhydGFmZG1hb2lkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzMxODc2NzUsImV4cCI6MjA4ODc2MzY3NX0.kCGsnnziHOkxeRhEQBTwPvMDNmG8YrQbe-e-kaHXvWQ'", "'" + cfg.key + "'")
-        .replace("'%%PASS_HASH%%'", "'" + (cfg.passHash || '') + "'");
-      const blob = new Blob([published], {type: 'text/html'});
-      const a = document.createElement('a');
-      a.href = URL.createObjectURL(blob);
-      a.download = 'daggerheart-campaign.html';
-      a.click();
-      notify('Downloaded! Upload this file to Netlify.', 'success');
-    })
-    .catch(() => notify('Could not fetch page source.', 'error'));
 }
 
 // ── GM AUTH ─────────────────────────────────────────────────────────────
@@ -726,7 +703,6 @@ function renderUI() {
     nameWrap.innerHTML = `<input class="campaign-name-input" id="campaignName" type="text" placeholder="Campaign name…" value="${esc(window._campaignName||'')}">`;
     document.getElementById('campaignName').addEventListener('input', saveCampaignMeta);
     document.getElementById('settingsBtn').style.display = '';
-  document.getElementById('publishBtn').style.display = '';
   } else {
     nameWrap.innerHTML = `<span class="campaign-name-display">${esc(window._campaignName||'')}</span>`;
     if (window._campaignName) document.getElementById('campaignSubtitle').textContent = window._campaignName;
