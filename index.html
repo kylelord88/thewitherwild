@@ -818,30 +818,54 @@ function renderView(entry, schema) {
   `;
 }
 
+function renderTextareaField(f, val) {
+  const k = f.key;
+  const el = document.createElement('div');
+  el.className = 'form-field full';
+  const label = document.createElement('label');
+  label.className = 'form-label' + (f.gmOnly ? ' gm-label' : '');
+  label.textContent = f.label;
+  el.appendChild(label);
+  const wrap = document.createElement('div');
+  wrap.className = 'textarea-wrap';
+  const toolbar = document.createElement('div');
+  toolbar.className = 'fmt-toolbar';
+  [
+    ['B', 'Bold',          () => fmtInsert('f_'+k,'**','**')],
+    ['I', 'Italic',        () => fmtInsert('f_'+k,'*','*')],
+    [null, null, null],
+    ['• List', 'Bullets',  () => fmtBullet('f_'+k,'ul')],
+    ['1. List', 'Numbered',() => fmtBullet('f_'+k,'ol')],
+    [null, null, null],
+    ['—', 'Divider',       () => fmtInsert('f_'+k,'\n---\n','')],
+  ].forEach(([label, title, handler]) => {
+    if (!label) { const sep = document.createElement('div'); sep.className='sep'; toolbar.appendChild(sep); return; }
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.title = title;
+    btn.innerHTML = label === 'B' ? '<b>B</b>' : label === 'I' ? '<i>I</i>' : label;
+    btn.addEventListener('click', handler);
+    toolbar.appendChild(btn);
+  });
+  const ta = document.createElement('textarea');
+  ta.className = 'form-textarea';
+  ta.id = 'f_' + k;
+  ta.rows = 5;
+  ta.value = val;
+  wrap.appendChild(toolbar);
+  wrap.appendChild(ta);
+  el.appendChild(wrap);
+  return el.outerHTML;
+}
+
 function renderForm(entry, schema) {
   const isNew = !entry.id;
   const pub = schema.fields.filter(f=>!f.gmOnly);
   const gm  = schema.fields.filter(f=>f.gmOnly);
   const rf = f => {
     const val = entry[f.key]||'';
-    if (f.type==='textarea') {
-      const k = f.key;
-      return '<div class="form-field full">'
-        + '<label class="form-label' + (f.gmOnly?' gm-label':'') + '">' + f.label + '</label>'
-        + '<div class="textarea-wrap">'
-        + '<div class="fmt-toolbar">'
-        + '<button type="button" onclick="fmtInsert(\'f_' + k + '\',\'**\',\'**\')" title="Bold"><b>B</b></button>'
-        + '<button type="button" onclick="fmtInsert(\'f_' + k + '\',\'*\',\'*\')" title="Italic"><i>I</i></button>'
-        + '<div class="sep"></div>'
-        + '<button type="button" onclick="fmtBullet(\'f_' + k + '\',\'ul\')" title="Bullet list">• List</button>'
-        + '<button type="button" onclick="fmtBullet(\'f_' + k + '\',\'ol\')" title="Numbered list">1. List</button>'
-        + '<div class="sep"></div>'
-        + '<button type="button" onclick="fmtInsert(\'f_' + k + '\',\'\\n---\\n\',\'\')" title="Divider">—</button>'
-        + '</div>'
-        + '<textarea class="form-textarea" id="f_' + k + '" rows="5">' + esc(val) + '</textarea>'
-        + '</div></div>';
-    }
-    if (f.type==='select')   return `<div class="form-field"><label class="form-label">${f.label}</label><select class="form-select" id="f_${f.key}">${f.options.map(o=>`<option value="${o}"${val===o?' selected':''}>${o[0].toUpperCase()+o.slice(1)}</option>`).join('')}</select></div>`;
+    if (f.type==='select') return `<div class="form-field"><label class="form-label">${f.label}</label><select class="form-select" id="f_${f.key}">${f.options.map(o=>`<option value="${o}"${val===o?' selected':''}>${o[0].toUpperCase()+o.slice(1)}</option>`).join('')}</select></div>`;
+    if (f.type==='textarea') return renderTextareaField(f, val);
     return `<div class="form-field"><label class="form-label">${f.label}${f.required?' *':''}</label><input class="form-input" id="f_${f.key}" type="text" value="${esc(val)}" placeholder="${f.label}…"></div>`;
   };
   return `
