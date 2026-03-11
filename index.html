@@ -127,7 +127,7 @@
   .field{display:flex;flex-direction:column;gap:.3rem;}
   .field.full{grid-column:1/-1;}
   .field-label{font-family:'Rajdhani',sans-serif;font-size:.68rem;font-weight:600;letter-spacing:.25em;text-transform:uppercase;color:var(--gold-dim);}
-  .field-value{font-size:1rem;color:var(--parchment);line-height:1.55;white-space:pre-wrap;word-break:break-word;}
+  .field-value{font-size:1rem;color:var(--parchment);line-height:1.55;word-break:break-word;}
   .ornament-divider{display:flex;align-items:center;gap:.75rem;margin:1.1rem 0;color:rgba(201,150,58,.3);font-size:.9rem;}
   .ornament-divider::before,.ornament-divider::after{content:'';flex:1;height:1px;background:rgba(201,150,58,.18);}
   .form-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:1rem;margin-bottom:1.5rem;}
@@ -157,6 +157,20 @@
   .sidebar-list::-webkit-scrollbar-thumb,.detail-panel::-webkit-scrollbar-thumb{background:rgba(201,150,58,.2);border-radius:2px;}
   @media(max-width:680px){main{flex-direction:column;}.sidebar{width:100%;max-height:260px;border-right:none;border-bottom:1px solid rgba(201,150,58,.15);}.detail-panel{padding:1.25rem 1rem;}nav,header{padding-left:1rem;padding-right:1rem;}}
   header,nav,main{animation:fadeUp .35s ease both;}nav{animation-delay:.07s;}main{animation-delay:.14s;}
+
+  /* ── RICH TEXT TOOLBAR ── */
+  .textarea-wrap{display:flex;flex-direction:column;gap:0;}
+  .fmt-toolbar{display:flex;gap:2px;padding:4px 6px;background:rgba(245,237,224,.04);border:1px solid rgba(201,150,58,.25);border-bottom:none;border-radius:3px 3px 0 0;}
+  .fmt-toolbar button{background:rgba(245,237,224,.06);border:1px solid rgba(201,150,58,.15);color:rgba(245,237,224,.7);font-family:'Crimson Pro',serif;font-size:.85rem;padding:2px 7px;border-radius:2px;cursor:pointer;transition:all .15s;line-height:1.4;}
+  .fmt-toolbar button:hover{background:rgba(201,150,58,.2);color:var(--gold);border-color:rgba(201,150,58,.4);}
+  .fmt-toolbar .sep{width:1px;background:rgba(201,150,58,.15);margin:2px 3px;}
+  .textarea-wrap .form-textarea{border-radius:0 0 3px 3px;}
+  .field-value b{color:var(--gold-light);font-weight:600;}
+  .field-value i{color:rgba(245,237,224,.85);font-style:italic;}
+  .field-value ul{margin:.35rem 0 .35rem 1.25rem;}
+  .field-value ol{margin:.35rem 0 .35rem 1.5rem;}
+  .field-value li{margin:.15rem 0;line-height:1.5;}
+  .field-value hr{border:none;border-top:1px solid rgba(201,150,58,.2);margin:.6rem 0;}
 </style>
 </head>
 <body>
@@ -799,8 +813,8 @@ function renderView(entry, schema) {
     </div>
     ${mainFields.some(f=>entry[f.key])?`<div class="fields-grid">${mainFields.filter(f=>entry[f.key]).map(f=>`<div class="field"><div class="field-label">${f.label}</div><div class="field-value">${esc(entry[f.key])}</div></div>`).join('')}</div>`:''}
     ${tags.length?`<div class="field" style="margin-bottom:1.25rem;"><div class="field-label">Tags</div><div class="tags-display">${tags.map(t=>`<span class="tag">${esc(t)}</span>`).join('')}</div></div>`:''}
-    ${pubText.map(f=>entry[f.key]?`<div class="ornament-divider">✦</div><div class="field full"><div class="field-label">${f.label}</div><div class="field-value">${esc(entry[f.key])}</div></div>`:'').join('')}
-    ${gmText.length&&gmText.some(f=>entry[f.key])?`<div class="ornament-divider">✦</div><div class="gm-section"><div class="gm-section-label">GM Eyes Only</div>${gmText.map(f=>entry[f.key]?`<div class="field full" style="margin-bottom:.75rem;"><div class="field-label">${f.label}</div><div class="field-value">${esc(entry[f.key])}</div></div>`:'').join('')}</div>`:''}
+    ${pubText.map(f=>entry[f.key]?`<div class="ornament-divider">✦</div><div class="field full"><div class="field-label">${f.label}</div><div class="field-value">${renderMd(entry[f.key])}</div></div>`:'').join('')}
+    ${gmText.length&&gmText.some(f=>entry[f.key])?`<div class="ornament-divider">✦</div><div class="gm-section"><div class="gm-section-label">GM Eyes Only</div>${gmText.map(f=>entry[f.key]?`<div class="field full" style="margin-bottom:.75rem;"><div class="field-label">${f.label}</div><div class="field-value">${renderMd(entry[f.key])}</div></div>`:'').join('')}</div>`:''}
   `;
 }
 
@@ -810,7 +824,21 @@ function renderForm(entry, schema) {
   const gm  = schema.fields.filter(f=>f.gmOnly);
   const rf = f => {
     const val = entry[f.key]||'';
-    if (f.type==='textarea') return `<div class="form-field full"><label class="form-label${f.gmOnly?' gm-label':''}">${f.label}</label><textarea class="form-textarea" id="f_${f.key}" rows="4">${esc(val)}</textarea></div>`;
+    if (f.type==='textarea') return `<div class="form-field full">
+      <label class="form-label${f.gmOnly?' gm-label':''}">${f.label}</label>
+      <div class="textarea-wrap">
+        <div class="fmt-toolbar">
+          <button type="button" onclick="fmtInsert('f_${f.key}','**','**')" title="Bold"><b>B</b></button>
+          <button type="button" onclick="fmtInsert('f_${f.key}','*','*')" title="Italic"><i>I</i></button>
+          <div class="sep"></div>
+          <button type="button" onclick="fmtBullet('f_${f.key}','ul')" title="Bullet list">• List</button>
+          <button type="button" onclick="fmtBullet('f_${f.key}','ol')" title="Numbered list">1. List</button>
+          <div class="sep"></div>
+          <button type="button" onclick="fmtInsert('f_${f.key}','\n---\n','')" title="Divider">—</button>
+        </div>
+        <textarea class="form-textarea" id="f_${f.key}" rows="5">${esc(val)}</textarea>
+      </div>
+    </div>`;
     if (f.type==='select')   return `<div class="form-field"><label class="form-label">${f.label}</label><select class="form-select" id="f_${f.key}">${f.options.map(o=>`<option value="${o}"${val===o?' selected':''}>${o[0].toUpperCase()+o.slice(1)}</option>`).join('')}</select></div>`;
     return `<div class="form-field"><label class="form-label">${f.label}${f.required?' *':''}</label><input class="form-input" id="f_${f.key}" type="text" value="${esc(val)}" placeholder="${f.label}…"></div>`;
   };
@@ -856,11 +884,66 @@ async function deleteEntry() {
 
 // ── HELPERS ─────────────────────────────────────────────────────────────
 function uid() { return Date.now().toString(36)+Math.random().toString(36).slice(2); }
-function esc(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/\n/g,'<br>'); }
+function esc(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function renderMd(s) {
+  if (!s) return '';
+  const lines = String(s).split('\n');
+  let html = '', inUl = false, inOl = false;
+  for (const line of lines) {
+    const safe = line.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+      .replace(/\*\*(.+?)\*\*/g,'<b>$1</b>').replace(/__(.+?)__/g,'<b>$1</b>')
+      .replace(/\*([^*\n]+?)\*/g,'<i>$1</i>').replace(/_([^_\n]+?)_/g,'<i>$1</i>');
+    const ulM = safe.match(/^[-*•]\s+(.*)/);
+    const olM = safe.match(/^\d+[.)]\s+(.*)/);
+    const hr  = /^---+$/.test(safe.trim());
+    if (hr) {
+      if (inUl){html+='</ul>';inUl=false;} if(inOl){html+='</ol>';inOl=false;}
+      html += '<hr>';
+    } else if (ulM) {
+      if(inOl){html+='</ol>';inOl=false;} if(!inUl){html+='<ul>';inUl=true;}
+      html += `<li>${ulM[1]}</li>`;
+    } else if (olM) {
+      if(inUl){html+='</ul>';inUl=false;} if(!inOl){html+='<ol>';inOl=true;}
+      html += `<li>${olM[1]}</li>`;
+    } else {
+      if(inUl){html+='</ul>';inUl=false;} if(inOl){html+='</ol>';inOl=false;}
+      html += safe === '' ? '<br>' : safe + '<br>';
+    }
+  }
+  if(inUl)html+='</ul>'; if(inOl)html+='</ol>';
+  return html.replace(/<br>$/, '');
+}
 function notify(msg, type='success') {
   const el = document.createElement('div');
   el.className = `notification ${type}`; el.textContent = msg;
   document.body.appendChild(el); setTimeout(()=>el.remove(), 2800);
+}
+
+// ── TEXT FORMATTING HELPERS ─────────────────────────────────────────────
+function fmtInsert(id, before, after) {
+  const ta = document.getElementById(id);
+  if (!ta) return;
+  const start = ta.selectionStart, end = ta.selectionEnd;
+  const selected = ta.value.slice(start, end);
+  ta.value = ta.value.slice(0, start) + before + (selected||'text') + after + ta.value.slice(end);
+  ta.selectionStart = start + before.length;
+  ta.selectionEnd   = start + before.length + (selected||'text').length;
+  ta.focus();
+}
+
+function fmtBullet(id, type) {
+  const ta = document.getElementById(id);
+  if (!ta) return;
+  const start = ta.selectionStart;
+  const lineStart = ta.value.lastIndexOf('
+', start - 1) + 1;
+  const prefix = type === 'ul' ? '- ' : '1. ';
+  ta.value = ta.value.slice(0, lineStart) + prefix + ta.value.slice(lineStart);
+  ta.selectionStart = ta.selectionEnd = lineStart + prefix.length;
+  ta.focus();
 }
 
 // ── BOOT ────────────────────────────────────────────────────────────────
