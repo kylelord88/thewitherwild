@@ -329,8 +329,8 @@ let state = {current:'npcs',selected:null,editing:false};
 // ── PUBLIC CREDENTIALS (safe to embed — anon/read key only) ─────────────
 // These are set when you use Settings → Publish to Netlify.
 // Players use these to connect without any setup.
-const BAKED_URL = '%%SUPABASE_URL%%';
-const BAKED_KEY = '%%SUPABASE_KEY%%';
+const BAKED_URL = 'https://bpqnacunxxrtafdmaoid.supabase.co';
+const BAKED_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJwcW5hY3VueHhydGFmZG1hb2lkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzMxODc2NzUsImV4cCI6MjA4ODc2MzY3NX0.kCGsnnziHOkxeRhEQBTwPvMDNmG8YrQbe-e-kaHXvWQ';
 
 let SB_URL = '', SB_KEY = '';
 
@@ -469,8 +469,8 @@ function publishFile() {
     .then(r => r.text())
     .then(html => {
       const published = html
-        .replace("'%%SUPABASE_URL%%'", "'" + cfg.url + "'")
-        .replace("'%%SUPABASE_KEY%%'", "'" + cfg.key + "'");
+        .replace("'https://bpqnacunxxrtafdmaoid.supabase.co'", "'" + cfg.url + "'")
+        .replace("'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJwcW5hY3VueHhydGFmZG1hb2lkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzMxODc2NzUsImV4cCI6MjA4ODc2MzY3NX0.kCGsnnziHOkxeRhEQBTwPvMDNmG8YrQbe-e-kaHXvWQ'", "'" + cfg.key + "'");
       const blob = new Blob([published], {type: 'text/html'});
       const a = document.createElement('a');
       a.href = URL.createObjectURL(blob);
@@ -531,10 +531,10 @@ async function init() {
   SB_URL = resolvedUrl;
   SB_KEY = resolvedKey;
 
-  // Default to read-only. GM must explicitly authenticate.
+  // Default to read-only. GM unlocks by entering password.
   const stored = localStorage.getItem('dh_gm_auth');
   const passHash = cfg?.passHash;
-  IS_GM = !!(passHash && stored && stored === passHash);
+  IS_GM = !passHash || (stored && stored === passHash);
 
   showLoading(true);
   try {
