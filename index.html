@@ -83,10 +83,6 @@
   .search-input{width:100%;background:rgba(245,237,224,.05);border:1px solid rgba(201,150,58,.2);color:var(--parchment);font-family:'Crimson Pro',serif;font-size:.95rem;padding:.45rem .7rem;border-radius:3px;outline:none;transition:border-color .2s;}
   .search-input:focus{border-color:rgba(201,150,58,.5);}
   .search-input::placeholder{color:rgba(245,237,224,.25);font-style:italic;}
-  .sidebar-filters{display:flex;flex-wrap:wrap;gap:4px;padding:6px 9px;border-bottom:1px solid rgba(201,150,58,.1);}
-  .filter-btn{font-family:'Rajdhani',sans-serif;font-size:.68rem;font-weight:600;letter-spacing:.1em;text-transform:uppercase;padding:.2rem .55rem;border-radius:2px;border:1px solid rgba(201,150,58,.25);background:transparent;color:rgba(245,237,224,.45);cursor:pointer;transition:all .15s;}
-  .filter-btn:hover{border-color:rgba(201,150,58,.5);color:rgba(201,150,58,.8);}
-  .filter-btn.active{background:rgba(201,150,58,.15);border-color:rgba(201,150,58,.6);color:rgba(201,150,58,1);}
   .sidebar-list{flex:1;overflow-y:auto;scrollbar-width:thin;scrollbar-color:rgba(201,150,58,.2) transparent;}
   .sidebar-item{padding:.7rem 1rem;cursor:pointer;border-bottom:1px solid rgba(201,150,58,.07);transition:background .15s;display:flex;justify-content:space-between;align-items:flex-start;gap:.5rem;}
   .sidebar-item:hover{background:rgba(201,150,58,.07);}
@@ -230,13 +226,11 @@
   <button class="nav-tab" data-section="locations" onclick="switchSection('locations')">🗺 Locations <span class="tab-count" id="count-locations">0</span></button>
   <button class="nav-tab" data-section="quests" onclick="switchSection('quests')">📜 Quests <span class="tab-count" id="count-quests">0</span></button>
   <button class="nav-tab" data-section="sessions" onclick="switchSection('sessions')">📖 Sessions <span class="tab-count" id="count-sessions">0</span></button>
-  <button class="nav-tab" data-section="divinities" onclick="switchSection('divinities')">✨ Faint Divinities <span class="tab-count" id="count-divinities">0</span></button>
 </nav>
 
 <main>
   <aside class="sidebar">
     <div class="sidebar-search"><input class="search-input" id="searchInput" type="text" placeholder="Search…" oninput="renderSidebar()"></div>
-    <div class="sidebar-filters" id="sidebarFilters" style="display:none;"></div>
     <div class="sidebar-list" id="sidebarList"></div>
     <button class="btn-add-sidebar" id="addBtn" onclick="startNew()" style="display:none;">＋ Add New</button>
   </aside>
@@ -309,11 +303,11 @@
 <script>
 // ── SCHEMA ─────────────────────────────────────────────────────────────
 const SCHEMA = {
-  npcs:{label:'NPC',plural:'NPCs',icon:'👤',badge:e=>e.standing||'neutral',sub:e=>e.role||'',
+  npcs:{label:'NPC',plural:'NPCs',icon:'👤',badge:e=>e.attitude||'neutral',sub:e=>e.role||'',
     fields:[
       {key:'name',label:'Name',type:'text',required:true},
       {key:'role',label:'Role / Occupation',type:'text'},
-      {key:'standing',label:'Standing',type:'select',options:['Ally','Neutral','Hostile','Unknown']},
+      {key:'attitude',label:'Attitude',type:'select',options:['ally','neutral','hostile','unknown']},
       {key:'faction',label:'Faction',type:'text'},
       {key:'location',label:'Last Known Location',type:'text'},
       {key:'appearance',label:'Appearance',type:'textarea'},
@@ -326,10 +320,11 @@ const SCHEMA = {
     fields:[
       {key:'name',label:'Name',type:'text',required:true},
       {key:'type',label:'Type (guild, cult, nation…)',type:'text'},
-      {key:'standing',label:'Party Standing',type:'select',options:['Ally','Neutral','Hostile','Unknown']},
+      {key:'standing',label:'Party Standing',type:'select',options:['ally','neutral','hostile','unknown']},
       {key:'leader',label:'Leader / Key Figures',type:'text'},
       {key:'hq',label:'Headquarters',type:'text'},
       {key:'goal',label:'Goals & Motives',type:'textarea'},
+      {key:'resources',label:'Resources & Assets',type:'textarea'},
       {key:'secrets',label:'Secrets & Hidden Agenda',type:'textarea',gmOnly:true},
       {key:'relations',label:'Relationships to Other Factions',type:'textarea'},
       {key:'notes',label:'GM Notes',type:'textarea',gmOnly:true},
@@ -363,20 +358,6 @@ const SCHEMA = {
       {key:'notes',label:'GM Notes',type:'textarea',gmOnly:true},
       {key:'tags',label:'Tags',type:'text'},
     ]},
-  divinities:{label:'Divinity',plural:'Faint Divinities',icon:'✨',badge:e=>e.standing||'unknown',sub:e=>e.domain||'',
-    fields:[
-      {key:'name',label:'Name',type:'text',required:true},
-      {key:'domain',label:'Domain (God of…)',type:'text'},
-      {key:'standing',label:'Standing',type:'select',options:['Ally','Neutral','Hostile','Unknown']},
-      {key:'realm',label:'Realm / Territory',type:'text'},
-      {key:'appearance',label:'Appearance & Form',type:'textarea'},
-      {key:'personality',label:'Personality & Disposition',type:'textarea'},
-      {key:'dogma',label:'Dogma & Worship',type:'textarea'},
-      {key:'worshippers',label:'Worshippers & Cults',type:'textarea'},
-      {key:'secret',label:'Hidden Truths',type:'textarea',gmOnly:true},
-      {key:'notes',label:'GM Notes',type:'textarea',gmOnly:true},
-      {key:'tags',label:'Tags',type:'text'},
-    ]},
   sessions:{label:'Session',plural:'Sessions',icon:'📖',badge:e=>e.number?`#${e.number}`:'—',sub:e=>e.date||'',
     fields:[
       {key:'name',label:'Session Title',type:'text',required:true},
@@ -397,7 +378,7 @@ const SCHEMA = {
 const CFG_KEY = 'dh_codex_cfg3';
 // Everyone is read-only by default. GM unlocks via password.
 let IS_GM = false;
-let db = {npcs:[],factions:[],locations:[],quests:[],sessions:[],divinities:[]};
+let db = {npcs:[],factions:[],locations:[],quests:[],sessions:[]};
 let state = {current:'npcs',selected:null,editing:false};
 // ── PUBLIC CREDENTIALS (safe to embed — anon/read key only) ─────────────
 // These are set when you use Settings → Publish to Netlify.
@@ -525,26 +506,7 @@ async function saveSetup() {
   setMsg('Connected!', 'ok');
   setTimeout(() => {
     document.getElementById('setupOverlay').style.display = 'none';
-    function fmtInsert(id, before, after) {
-  var ta = document.getElementById(id);
-  if (!ta) return;
-  var s = ta.selectionStart, e = ta.selectionEnd, sel = ta.value.slice(s,e);
-  ta.value = ta.value.slice(0,s) + before + (sel||'text') + after + ta.value.slice(e);
-  ta.selectionStart = s + before.length;
-  ta.selectionEnd = s + before.length + (sel||'text').length;
-  ta.focus();
-}
-function fmtBullet(id, type) {
-  var ta = document.getElementById(id);
-  if (!ta) return;
-  var s = ta.selectionStart;
-  var ls = ta.value.lastIndexOf('\n', s-1) + 1;
-  var pre = type === 'ul' ? '- ' : '1. ';
-  ta.value = ta.value.slice(0,ls) + pre + ta.value.slice(ls);
-  ta.selectionStart = ta.selectionEnd = ls + pre.length;
-  ta.focus();
-}
-init();
+    init();
   }, 600);
 }
 
@@ -791,59 +753,10 @@ function switchSection(section) {
   renderSidebar(); renderDetail();
 }
 
-// Filter state per section
-const sectionFilters = {};
-
-function renderFilterBar() {
-  const el = document.getElementById('sidebarFilters');
-  const section = state.current;
-  // Define which field to filter by per section
-  const filterDefs = {
-    npcs:       {key:'standing', label:'Standing'},
-    locations:  {key:'region',   label:'Region'},
-    quests:     {key:'status',   label:'Status'},
-    divinities: {key:'standing', label:'Standing'},
-  };
-  const def = filterDefs[section];
-  if (!def) { el.style.display='none'; return; }
-  // Collect unique values from data
-  const vals = [...new Set(db[section].map(e => e[def.key]).filter(Boolean))].sort();
-  if (!vals.length) { el.style.display='none'; return; }
-  const active = sectionFilters[section] || null;
-    el.style.display = 'flex';
-  el.innerHTML = '';
-  const allBtn = document.createElement('button');
-  allBtn.className = 'filter-btn' + (active === null ? ' active' : '');
-  allBtn.textContent = 'All';
-  allBtn.onclick = function(){ setFilter(null); };
-  el.appendChild(allBtn);
-  vals.forEach(function(v) {
-    const btn = document.createElement('button');
-    btn.className = 'filter-btn' + (active === v ? ' active' : '');
-    btn.textContent = v.charAt(0).toUpperCase() + v.slice(1);
-    btn.onclick = function(){ setFilter(v); };
-    el.appendChild(btn);
-  });
-}
-
-function setFilter(val) {
-  sectionFilters[state.current] = val;
-  renderFilterBar();
-  renderSidebar();
-}
-
 function renderSidebar() {
-  renderFilterBar();
   const schema = SCHEMA[state.current];
   const q = document.getElementById('searchInput').value.toLowerCase();
-  const filterDefs = {npcs:'standing', locations:'region', quests:'status', divinities:'standing'};
-  const filterKey = filterDefs[state.current];
-  const activeFilter = sectionFilters[state.current] || null;
-  const items = db[state.current].filter(e => {
-    if (q && !Object.values(e).some(v => String(v).toLowerCase().includes(q))) return false;
-    if (activeFilter && filterKey && e[filterKey] !== activeFilter) return false;
-    return true;
-  });
+  const items = db[state.current].filter(e => !q || Object.values(e).some(v => String(v).toLowerCase().includes(q)));
   const list = document.getElementById('sidebarList');
   if (!items.length) {
     list.innerHTML = `<div style="padding:1.5rem 1rem;color:rgba(245,237,224,.3);font-style:italic;font-size:.9rem;text-align:center;">No entries yet</div>`;
@@ -1021,6 +934,26 @@ function notify(msg, type='success') {
 }
 
 // ── BOOT ────────────────────────────────────────────────────────────────
+function fmtInsert(id, before, after) {
+  var ta = document.getElementById(id);
+  if (!ta) return;
+  var s = ta.selectionStart, e = ta.selectionEnd, sel = ta.value.slice(s,e);
+  ta.value = ta.value.slice(0,s) + before + (sel||'text') + after + ta.value.slice(e);
+  ta.selectionStart = s + before.length;
+  ta.selectionEnd = s + before.length + (sel||'text').length;
+  ta.focus();
+}
+function fmtBullet(id, type) {
+  var ta = document.getElementById(id);
+  if (!ta) return;
+  var s = ta.selectionStart;
+  var ls = ta.value.lastIndexOf('\n', s-1) + 1;
+  var pre = type === 'ul' ? '- ' : '1. ';
+  ta.value = ta.value.slice(0,ls) + pre + ta.value.slice(ls);
+  ta.selectionStart = ta.selectionEnd = ls + pre.length;
+  ta.focus();
+}
+
 init();
 </script>
 </body>
