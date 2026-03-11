@@ -246,6 +246,47 @@
   </div>
 </div>
 
+<!-- GM Login Modal -->
+<div class="setup-overlay" id="gmLoginOverlay" style="display:none;">
+  <div class="setup-box" style="max-width:380px;">
+    <h2 style="font-size:1.1rem;">🔐 GM Login</h2>
+    <p id="gmLoginDesc" style="margin-bottom:1.2rem;">Enter your GM password to unlock editing.</p>
+    <div id="gmLoginForm">
+      <div class="setup-step">
+        <div class="setup-step-label">Password</div>
+        <input class="setup-input" id="gmPassInput" type="password" placeholder="GM password…" autocomplete="current-password">
+      </div>
+      <div style="display:flex;gap:.6rem;margin-top:1rem;">
+        <button class="setup-btn" id="gmLoginBtn" onclick="submitGMLogin()" style="margin-top:0;">Login</button>
+        <button class="setup-btn" onclick="closeGMLogin()" style="margin-top:0;background:rgba(60,60,60,.3);border-color:rgba(120,120,120,.3);color:rgba(245,237,224,.6);">Cancel</button>
+      </div>
+      <div style="margin-top:.75rem;text-align:center;">
+        <button onclick="showGMReset()" style="background:none;border:none;color:rgba(201,150,58,.5);cursor:pointer;font-family:inherit;font-size:.8rem;text-decoration:underline;">Forgot password?</button>
+      </div>
+    </div>
+    <div id="gmResetForm" style="display:none;">
+      <p style="font-size:.85rem;color:rgba(245,237,224,.5);margin-bottom:1rem;">Prove ownership by entering your Supabase API key, then set a new password.</p>
+      <div class="setup-step">
+        <div class="setup-step-label">Supabase API Key</div>
+        <input class="setup-input" id="gmResetApiKey" type="text" placeholder="eyJhbGci…" autocomplete="off">
+      </div>
+      <div class="setup-step">
+        <div class="setup-step-label">New Password</div>
+        <input class="setup-input" id="gmResetPass1" type="password" placeholder="New password…">
+      </div>
+      <div class="setup-step">
+        <div class="setup-step-label">Confirm Password</div>
+        <input class="setup-input" id="gmResetPass2" type="password" placeholder="Confirm…">
+      </div>
+      <div style="display:flex;gap:.6rem;margin-top:1rem;">
+        <button class="setup-btn" onclick="submitGMReset()" style="margin-top:0;">Reset Password</button>
+        <button class="setup-btn" onclick="showGMLoginForm()" style="margin-top:0;background:rgba(60,60,60,.3);border-color:rgba(120,120,120,.3);color:rgba(245,237,224,.6);">Back</button>
+      </div>
+    </div>
+    <div class="setup-msg" id="gmLoginMsg"></div>
+  </div>
+</div>
+
 <script>
 // ── SCHEMA ─────────────────────────────────────────────────────────────
 const SCHEMA = {
@@ -484,17 +525,87 @@ function publishFile() {
 }
 
 // ── GM AUTH ─────────────────────────────────────────────────────────────
-async function promptGMAuth() {
+// GM login modal logic
+function openGMLogin() {
+  document.getElementById('gmPassInput').value = '';
+  document.getElementById('gmLoginMsg').style.display = 'none';
+  showGMLoginForm();
+  document.getElementById('gmLoginOverlay').style.display = 'flex';
+  setTimeout(() => document.getElementById('gmPassInput').focus(), 100);
+}
+
+function closeGMLogin() {
+  document.getElementById('gmLoginOverlay').style.display = 'none';
+}
+
+function showGMLoginForm() {
+  document.getElementById('gmLoginForm').style.display = '';
+  document.getElementById('gmResetForm').style.display = 'none';
+  document.getElementById('gmLoginMsg').style.display = 'none';
+}
+
+function showGMReset() {
+  document.getElementById('gmLoginForm').style.display = 'none';
+  document.getElementById('gmResetForm').style.display = '';
+  document.getElementById('gmLoginMsg').style.display = 'none';
+}
+
+async function submitGMLogin() {
+  const pass = document.getElementById('gmPassInput').value;
+  const msg = document.getElementById('gmLoginMsg');
   const passHash = BAKED_PASS || loadConfig()?.passHash;
-  if (!passHash) return false; // no password set at all — deny by default
-  const stored = localStorage.getItem('dh_gm_auth');
-  if (stored === passHash) return true;
-  const pass = prompt('Enter GM password:');
-  if (!pass) return false;
+  if (!pass) { showMsg(msg, 'Please enter your password.', 'err'); return; }
+  if (!passHash) { showMsg(msg, 'No password set — use Forgot Password to set one.', 'err'); return; }
   const h = await hashPass(pass);
-  if (h === passHash) { localStorage.setItem('dh_gm_auth', h); return true; }
-  notify('Incorrect password.', 'error');
-  return false;
+  if (h === passHash) {
+    localStorage.setItem('dh_gm_auth', h);
+    closeGMLogin();
+    IS_GM = true;
+    renderUI();
+  } else {
+    showMsg(msg, 'Incorrect password.', 'err');
+    document.getElementById('gmPassInput').value = '';
+    document.getElementById('gmPassInput').focus();
+  }
+}
+
+// Allow pressing Enter in password field
+document.addEventListener('DOMContentLoaded', () => {
+  document.getElementById('gmPassInput').addEventListener('keydown', e => {
+    if (e.key === 'Enter') submitGMLogin();
+  });
+});
+
+async function submitGMReset() {
+  const apiKey = document.getElementById('gmResetApiKey').value.trim();
+  const p1 = document.getElementById('gmResetPass1').value;
+  const p2 = document.getElementById('gmResetPass2').value;
+  const msg = document.getElementById('gmLoginMsg');
+
+  const resolvedKey = BAKED_KEY || loadConfig()?.key;
+  if (!apiKey || apiKey !== resolvedKey) {
+    showMsg(msg, 'API key does not match — ownership not verified.', 'err'); return;
+  }
+  if (!p1) { showMsg(msg, 'Please enter a new password.', 'err'); return; }
+  if (p1 !== p2) { showMsg(msg, 'Passwords do not match.', 'err'); return; }
+
+  const h = await hashPass(p1);
+  const cfg = loadConfig() || {};
+  cfg.passHash = h;
+  saveConfig(cfg);
+  localStorage.setItem('dh_gm_auth', h);
+  showMsg(msg, 'Password reset! Logging you in…', 'ok');
+  setTimeout(() => {
+    closeGMLogin();
+    IS_GM = true;
+    renderUI();
+  }, 800);
+}
+
+function showMsg(el, text, type) {
+  el.textContent = text;
+  el.className = 'setup-msg ' + type;
+  el.style.display = 'block';
 }
 
 async function toggleGM() {
@@ -502,8 +613,14 @@ async function toggleGM() {
     localStorage.removeItem('dh_gm_auth');
     IS_GM = false; state.editing = false; renderUI();
   } else {
-    const ok = await promptGMAuth();
-    if (ok) { IS_GM = true; renderUI(); }
+    // Check if already authenticated
+    const passHash = BAKED_PASS || loadConfig()?.passHash;
+    const stored = localStorage.getItem('dh_gm_auth');
+    if (passHash && stored === passHash) {
+      IS_GM = true; renderUI();
+    } else {
+      openGMLogin();
+    }
   }
 }
 
