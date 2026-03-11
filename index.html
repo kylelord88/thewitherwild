@@ -824,21 +824,23 @@ function renderForm(entry, schema) {
   const gm  = schema.fields.filter(f=>f.gmOnly);
   const rf = f => {
     const val = entry[f.key]||'';
-    if (f.type==='textarea') return `<div class="form-field full">
-      <label class="form-label${f.gmOnly?' gm-label':''}">${f.label}</label>
-      <div class="textarea-wrap">
-        <div class="fmt-toolbar">
-          <button type="button" onclick="fmtInsert('f_${f.key}','**','**')" title="Bold"><b>B</b></button>
-          <button type="button" onclick="fmtInsert('f_${f.key}','*','*')" title="Italic"><i>I</i></button>
-          <div class="sep"></div>
-          <button type="button" onclick="fmtBullet('f_${f.key}','ul')" title="Bullet list">• List</button>
-          <button type="button" onclick="fmtBullet('f_${f.key}','ol')" title="Numbered list">1. List</button>
-          <div class="sep"></div>
-          <button type="button" onclick="fmtInsert('f_${f.key}','\n---\n','')" title="Divider">—</button>
-        </div>
-        <textarea class="form-textarea" id="f_${f.key}" rows="5">${esc(val)}</textarea>
-      </div>
-    </div>`;
+    if (f.type==='textarea') {
+      const k = f.key;
+      return '<div class="form-field full">'
+        + '<label class="form-label' + (f.gmOnly?' gm-label':'') + '">' + f.label + '</label>'
+        + '<div class="textarea-wrap">'
+        + '<div class="fmt-toolbar">'
+        + '<button type="button" onclick="fmtInsert(\'f_' + k + '\',\'**\',\'**\')" title="Bold"><b>B</b></button>'
+        + '<button type="button" onclick="fmtInsert(\'f_' + k + '\',\'*\',\'*\')" title="Italic"><i>I</i></button>'
+        + '<div class="sep"></div>'
+        + '<button type="button" onclick="fmtBullet(\'f_' + k + '\',\'ul\')" title="Bullet list">• List</button>'
+        + '<button type="button" onclick="fmtBullet(\'f_' + k + '\',\'ol\')" title="Numbered list">1. List</button>'
+        + '<div class="sep"></div>'
+        + '<button type="button" onclick="fmtInsert(\'f_' + k + '\',\'\\n---\\n\',\'\')" title="Divider">—</button>'
+        + '</div>'
+        + '<textarea class="form-textarea" id="f_' + k + '" rows="5">' + esc(val) + '</textarea>'
+        + '</div></div>';
+    }
     if (f.type==='select')   return `<div class="form-field"><label class="form-label">${f.label}</label><select class="form-select" id="f_${f.key}">${f.options.map(o=>`<option value="${o}"${val===o?' selected':''}>${o[0].toUpperCase()+o.slice(1)}</option>`).join('')}</select></div>`;
     return `<div class="form-field"><label class="form-label">${f.label}${f.required?' *':''}</label><input class="form-input" id="f_${f.key}" type="text" value="${esc(val)}" placeholder="${f.label}…"></div>`;
   };
