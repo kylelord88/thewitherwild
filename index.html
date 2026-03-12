@@ -190,8 +190,12 @@
   .dashboard-sub{font-family:'Rajdhani',sans-serif;font-size:.72rem;letter-spacing:.25em;text-transform:uppercase;color:rgba(201,150,58,.4);margin-bottom:2rem;}
   .dashboard-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:1.25rem;}
   .dash-panel{background:rgba(245,237,224,.02);border:1px solid rgba(201,150,58,.12);border-radius:6px;padding:1.25rem;}
-  .dash-panel-title{font-family:'Rajdhani',sans-serif;font-size:.7rem;font-weight:600;letter-spacing:.25em;text-transform:uppercase;color:rgba(201,150,58,.5);margin-bottom:1rem;display:flex;align-items:center;gap:.5rem;}
-  .dash-panel-title::after{content:'';flex:1;height:1px;background:rgba(201,150,58,.1);}
+  .dash-panel-title{font-family:'Rajdhani',sans-serif;font-size:.7rem;font-weight:600;letter-spacing:.25em;text-transform:uppercase;color:rgba(201,150,58,.5);margin-bottom:1rem;display:flex;align-items:center;justify-content:space-between;padding-bottom:.5rem;border-bottom:1px solid rgba(201,150,58,.1);}
+  .dash-view-all{font-family:'Rajdhani',sans-serif;font-size:.65rem;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:rgba(201,150,58,.4);cursor:pointer;background:none;border:none;padding:0;text-decoration:none;transition:color .2s;flex-shrink:0;}
+  .dash-view-all:hover{color:var(--gold);}
+  .header-name-input{background:transparent;border:none;border-bottom:1px solid rgba(201,150,58,.25);color:var(--gold);font-family:'Cinzel Decorative',serif;font-size:clamp(1.1rem,2.5vw,1.75rem);font-weight:700;text-shadow:0 0 30px rgba(201,150,58,.4),0 2px 4px rgba(0,0,0,.8);letter-spacing:.04em;outline:none;width:auto;max-width:340px;transition:border-color .2s;padding:0;}
+  .header-name-input:focus{border-bottom-color:rgba(201,150,58,.6);}
+  .header-name-input::placeholder{color:rgba(201,150,58,.3);}
   .dash-item{display:flex;align-items:flex-start;gap:.65rem;padding:.55rem 0;border-bottom:1px solid rgba(201,150,58,.06);cursor:pointer;transition:background .15s;}
   .dash-item:last-child{border-bottom:none;}
   .dash-item:hover .dash-item-name{color:var(--gold);}
@@ -239,13 +243,13 @@
 
 <header>
   <div class="header-title">
-    <h1>⚔ Campaign Codex</h1>
-    <span class="subtitle" id="campaignSubtitle">Daggerheart Campaign Manager</span>
+    <h1 id="headerTitle">⚔ Campaign Codex</h1>
+    <span class="subtitle" id="campaignSubtitle">Campaign Codex</span>
   </div>
   <div class="header-actions">
     <span id="campaignNameWrap"></span>
     <div class="sync-indicator" id="syncIndicator"><div class="sync-dot"></div><span id="syncText">—</span></div>
-    <a href="https://app.roll20.net/campaigns/details/20167782/the-witherwild" target="_blank" class="btn btn-edit" style="text-decoration:none;">⚔ Join Game</a>
+    <a href="https://app.roll20.net/campaigns/details/20167782/the-witherwild" target="_blank" class="btn btn-edit" style="text-decoration:none;padding:.6rem 1.5rem;font-size:.88rem;background:rgba(201,150,58,.3);border-color:rgba(201,150,58,.7);color:var(--gold-light);letter-spacing:.2em;box-shadow:0 0 12px rgba(201,150,58,.15);">⚔ Join Game</a>
     <button class="btn btn-edit" id="settingsBtn" onclick="showPasswordChange()" style="display:none;">⚙ Settings</button>
   </div>
 </header>
@@ -750,7 +754,7 @@ async function saveCampaignMeta() {
   const el = document.getElementById('campaignName');
   if (!el) return;
   const name = el.value;
-  document.getElementById('campaignSubtitle').textContent = name || 'Daggerheart Campaign Manager';
+  window._campaignName = name;
   try { await sbUpsert('codex_entries', { id: '__meta__', section: '__meta__', data: { campaignName: name } }); } catch {}
 }
 
@@ -765,14 +769,14 @@ function renderUI() {
     banner.innerHTML = `<span class="mode-dot"></span> PLAYER VIEW — read only &nbsp;|&nbsp; <button onclick="toggleGM()">GM Login</button>`;
   }
 
-  const nameWrap = document.getElementById('campaignNameWrap');
+  document.getElementById('campaignNameWrap').innerHTML = '';
+  const titleEl = document.getElementById('headerTitle');
   if (IS_GM) {
-    nameWrap.innerHTML = `<input class="campaign-name-input" id="campaignName" type="text" placeholder="Campaign name…" value="${esc(window._campaignName||'')}">`;
+    titleEl.innerHTML = `⚔ <input class="header-name-input" id="campaignName" type="text" placeholder="Campaign name…" value="${esc(window._campaignName||'')}">`;
     document.getElementById('campaignName').addEventListener('input', saveCampaignMeta);
     document.getElementById('settingsBtn').style.display = '';
   } else {
-    nameWrap.innerHTML = `<span class="campaign-name-display">${esc(window._campaignName||'')}</span>`;
-    if (window._campaignName) document.getElementById('campaignSubtitle').textContent = window._campaignName;
+    titleEl.textContent = '⚔ ' + (window._campaignName || 'Campaign Codex');
   }
 
   document.getElementById('addBtn').style.display = IS_GM ? '' : 'none';
@@ -1068,15 +1072,15 @@ function renderDashboard(panel) {
       <div class="dashboard-sub">Campaign Codex &nbsp;·&nbsp; Daggerheart</div>
       <div class="dashboard-grid">
         <div class="dash-panel">
-          <div class="dash-panel-title">Active Quests</div>
+          <div class="dash-panel-title">Active Quests <a class="dash-view-all" onclick="switchSection('quests')">View All →</a></div>
           ${questItems}
         </div>
         <div class="dash-panel">
-          <div class="dash-panel-title">Recent NPCs</div>
+          <div class="dash-panel-title">Recent NPCs <a class="dash-view-all" onclick="switchSection('npcs')">View All →</a></div>
           ${npcItems}
         </div>
         <div class="dash-panel">
-          <div class="dash-panel-title">Recent Locations</div>
+          <div class="dash-panel-title">Recent Locations <a class="dash-view-all" onclick="switchSection('locations')">View All →</a></div>
           ${locationItems}
         </div>
       </div>
