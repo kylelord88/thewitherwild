@@ -181,6 +181,25 @@
   .map-btn{width:32px;height:32px;background:rgba(10,8,5,.85);border:1px solid rgba(201,150,58,.3);color:rgba(201,150,58,.8);font-size:1.1rem;border-radius:3px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .15s;}
   .map-btn:hover{background:rgba(201,150,58,.15);color:var(--gold);}
   .map-hint{position:absolute;bottom:1.2rem;left:1.2rem;font-family:'Rajdhani',sans-serif;font-size:.7rem;letter-spacing:.1em;color:rgba(245,237,224,.2);z-index:10;}
+  .badge-main{background:rgba(201,150,58,.18);color:var(--gold);border:1px solid rgba(201,150,58,.3);}
+  .badge-side{background:rgba(100,130,180,.15);color:rgba(150,185,230,.8);border:1px solid rgba(100,130,180,.25);}
+
+  /* ── DASHBOARD ── */
+  .dashboard{padding:1.5rem 2rem;overflow-y:auto;height:100%;}
+  .dashboard-greeting{font-family:'Cinzel Decorative',serif;font-size:1.1rem;color:var(--gold);margin-bottom:.3rem;}
+  .dashboard-sub{font-family:'Rajdhani',sans-serif;font-size:.72rem;letter-spacing:.25em;text-transform:uppercase;color:rgba(201,150,58,.4);margin-bottom:2rem;}
+  .dashboard-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:1.25rem;}
+  .dash-panel{background:rgba(245,237,224,.02);border:1px solid rgba(201,150,58,.12);border-radius:6px;padding:1.25rem;}
+  .dash-panel-title{font-family:'Rajdhani',sans-serif;font-size:.7rem;font-weight:600;letter-spacing:.25em;text-transform:uppercase;color:rgba(201,150,58,.5);margin-bottom:1rem;display:flex;align-items:center;gap:.5rem;}
+  .dash-panel-title::after{content:'';flex:1;height:1px;background:rgba(201,150,58,.1);}
+  .dash-item{display:flex;align-items:flex-start;gap:.65rem;padding:.55rem 0;border-bottom:1px solid rgba(201,150,58,.06);cursor:pointer;transition:background .15s;}
+  .dash-item:last-child{border-bottom:none;}
+  .dash-item:hover .dash-item-name{color:var(--gold);}
+  .dash-item-icon{font-size:1rem;margin-top:.1rem;flex-shrink:0;}
+  .dash-item-name{font-size:.95rem;font-weight:600;color:var(--parchment);line-height:1.3;}
+  .dash-item-sub{font-size:.78rem;color:rgba(245,237,224,.4);font-style:italic;margin-top:.1rem;}
+  .dash-empty{font-family:'Rajdhani',sans-serif;font-size:.78rem;color:rgba(245,237,224,.2);letter-spacing:.08em;padding:.5rem 0;}
+  .dash-badges{display:flex;gap:.35rem;margin-top:.35rem;flex-wrap:wrap;}
 </style>
 </head>
 <body>
@@ -232,7 +251,8 @@
 </header>
 
 <nav id="mainNav">
-  <button class="nav-tab active" data-section="npcs" onclick="switchSection('npcs')">👤 NPCs <span class="tab-count" id="count-npcs">0</span></button>
+  <button class="nav-tab active" data-section="home" onclick="switchSection('home')">⌂ Home</button>
+  <button class="nav-tab" data-section="npcs" onclick="switchSection('npcs')">👤 NPCs <span class="tab-count" id="count-npcs">0</span></button>
   <button class="nav-tab" data-section="factions" onclick="switchSection('factions')">⚑ Factions <span class="tab-count" id="count-factions">0</span></button>
   <button class="nav-tab" data-section="locations" onclick="switchSection('locations')">🗺 Locations <span class="tab-count" id="count-locations">0</span></button>
   <button class="nav-tab" data-section="quests" onclick="switchSection('quests')">📜 Quests <span class="tab-count" id="count-quests">0</span></button>
@@ -360,6 +380,7 @@ const SCHEMA = {
     fields:[
       {key:'name',label:'Quest Name',type:'text',required:true},
       {key:'status',label:'Status',type:'select',options:['rumor','active','complete','failed']},
+      {key:'questType',label:'Quest Type',type:'select',options:['main','side']},
       {key:'giver',label:'Quest Giver',type:'text'},
       {key:'location',label:'Location',type:'text'},
       {key:'reward',label:'Reward',type:'text'},
@@ -392,7 +413,7 @@ const CFG_KEY = 'dh_codex_cfg3';
 // Everyone is read-only by default. GM unlocks via password.
 let IS_GM = false;
 let db = {npcs:[],factions:[],locations:[],quests:[],sessions:[],map:[]};
-let state = {current:'npcs',selected:null,editing:false,mapZoom:1,mapX:0,mapY:0};
+let state = {current:'home',selected:null,editing:false,mapZoom:1,mapX:0,mapY:0};
 // ── PUBLIC CREDENTIALS (safe to embed — anon/read key only) ─────────────
 // These are set when you use Settings → Publish to Netlify.
 // Players use these to connect without any setup.
@@ -784,7 +805,7 @@ function switchSection(section) {
   document.getElementById('searchInput').value = '';
   const sidebar = document.querySelector('.sidebar');
   const panel = document.getElementById('detailPanel');
-  if (section === 'map') {
+  if (section === 'map' || section === 'home') {
     sidebar.style.display = 'none';
     panel.style.padding = '0';
     panel.style.overflow = 'hidden';
@@ -809,12 +830,17 @@ function renderSidebar() {
     const badge = schema.badge(e);
     const sub = schema.sub(e);
     const badgeClass = 'badge-' + badge.toLowerCase().replace(/[^a-z]/g,'');
+    const typeBadge = (state.current === 'quests' && e.questType)
+      ? `<span class="sidebar-item-badge badge-${e.questType}">${e.questType}</span>` : '';
     return `<div class="sidebar-item${e.id===state.selected?' active':''}" onclick="selectItem('${e.id}')">
       <div>
         <div class="sidebar-item-name">${esc(e.name||'Unnamed')}</div>
         ${sub?`<div class="sidebar-item-sub">${esc(sub)}</div>`:''}
       </div>
-      <span class="sidebar-item-badge ${badgeClass}">${badge}</span>
+      <div style="display:flex;gap:.3rem;flex-direction:column;align-items:flex-end;">
+        <span class="sidebar-item-badge ${badgeClass}">${badge}</span>
+        ${typeBadge}
+      </div>
     </div>`;
   }).join('');
 }
@@ -824,6 +850,7 @@ function startNew()     { state.selected=null; state.editing=true;  renderSideba
 
 function renderDetail() {
   const panel = document.getElementById('detailPanel');
+  if (state.current === 'home') { renderDashboard(panel); return; }
   if (state.current === 'map') { renderMap(panel); return; }
   const schema = SCHEMA[state.current];
   if (state.editing && IS_GM) {
@@ -879,7 +906,7 @@ function renderView(entry, schema) {
     <div class="detail-header">
       <div class="detail-title-area">
         <div class="detail-title">${esc(entry.name||'Unnamed')}</div>
-        <div class="detail-meta"><span class="sidebar-item-badge ${badgeClass}">${badge}</span>${entry.date?`<span>${esc(entry.date)}</span>`:''}</div>
+        <div class="detail-meta"><span class="sidebar-item-badge ${badgeClass}">${badge}</span>${schema.label==='Quest'&&entry.questType?`<span class="sidebar-item-badge badge-${entry.questType}">${entry.questType}</span>`:''} ${entry.date?`<span>${esc(entry.date)}</span>`:''}</div>
       </div>
       ${IS_GM?`<div class="detail-actions"><button class="btn btn-edit" onclick="startEdit()">✎ Edit</button><button class="btn btn-delete" onclick="deleteEntry()">✕ Delete</button></div>`:''}
     </div>
@@ -978,6 +1005,82 @@ function notify(msg, type='success') {
 }
 
 // ── BOOT ────────────────────────────────────────────────────────────────
+function renderDashboard(panel) {
+  panel.style.padding = '0';
+  panel.style.overflow = 'hidden';
+
+  // Active quests
+  const activeQuests = db.quests.filter(q => q.status === 'active' || q.status === 'rumor')
+    .sort((a,b) => (a.status==='active'?0:1) - (b.status==='active'?0:1))
+    .slice(0, 5);
+
+  // Recent NPCs (last 5 by array order)
+  const recentNpcs = db.npcs.slice(-5).reverse();
+
+  // Recent locations (last 5)
+  const recentLocations = db.locations.slice(-5).reverse();
+
+  const questItems = activeQuests.length
+    ? activeQuests.map(q => `
+        <div class="dash-item" onclick="switchSection('quests');selectItem('${q.id}')">
+          <div class="dash-item-icon">📜</div>
+          <div>
+            <div class="dash-item-name">${esc(q.name||'Unnamed')}</div>
+            ${q.giver?`<div class="dash-item-sub">From ${esc(q.giver)}</div>`:''}
+            <div class="dash-badges">
+              <span class="sidebar-item-badge badge-${(q.status||'rumor').replace(/[^a-z]/g,'')}">${q.status||'rumor'}</span>
+              ${q.questType?`<span class="sidebar-item-badge badge-${q.questType}">${q.questType}</span>`:''}
+            </div>
+          </div>
+        </div>`).join('')
+    : '<div class="dash-empty">No active quests</div>';
+
+  const npcItems = recentNpcs.length
+    ? recentNpcs.map(n => `
+        <div class="dash-item" onclick="switchSection('npcs');selectItem('${n.id}')">
+          <div class="dash-item-icon">👤</div>
+          <div>
+            <div class="dash-item-name">${esc(n.name||'Unnamed')}</div>
+            ${n.role?`<div class="dash-item-sub">${esc(n.role)}</div>`:''}
+            ${n.attitude?`<div class="dash-badges"><span class="sidebar-item-badge badge-${n.attitude}">${n.attitude}</span></div>`:''}
+          </div>
+        </div>`).join('')
+    : '<div class="dash-empty">No NPCs yet</div>';
+
+  const locationItems = recentLocations.length
+    ? recentLocations.map(l => `
+        <div class="dash-item" onclick="switchSection('locations');selectItem('${l.id}')">
+          <div class="dash-item-icon">📍</div>
+          <div>
+            <div class="dash-item-name">${esc(l.name||'Unnamed')}</div>
+            ${l.region?`<div class="dash-item-sub">${esc(l.region)}</div>`:''}
+            ${l.type?`<div class="dash-badges"><span class="tag">${esc(l.type)}</span></div>`:''}
+          </div>
+        </div>`).join('')
+    : '<div class="dash-empty">No locations yet</div>';
+
+  panel.innerHTML = `
+    <div class="dashboard">
+      <div class="dashboard-greeting">The Witherwild</div>
+      <div class="dashboard-sub">Campaign Codex &nbsp;·&nbsp; Daggerheart</div>
+      <div class="dashboard-grid">
+        <div class="dash-panel">
+          <div class="dash-panel-title">Active Quests</div>
+          ${questItems}
+        </div>
+        <div class="dash-panel">
+          <div class="dash-panel-title">Recent NPCs</div>
+          ${npcItems}
+        </div>
+        <div class="dash-panel">
+          <div class="dash-panel-title">Recent Locations</div>
+          ${locationItems}
+        </div>
+      </div>
+    </div>`;
+}
+
+
 function renderMap(panel) {
   panel.style.padding = '0';
   panel.style.overflow = 'hidden';
