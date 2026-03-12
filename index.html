@@ -793,6 +793,7 @@ function setSyncState(s) {
 function showLoading(v) { document.getElementById('loadingOverlay').style.display = v ? 'flex' : 'none'; }
 
 function updateCounts() {
+  if (!db) return;
   for (const s of Object.keys(SCHEMA)) {
     const el = document.getElementById('count-'+s);
     if (el) el.textContent = db[s].length;
@@ -818,9 +819,11 @@ function switchSection(section) {
 }
 
 function renderSidebar() {
+  if (state.current === 'home' || state.current === 'map') return;
   const schema = SCHEMA[state.current];
+  if (!schema) return;
   const q = document.getElementById('searchInput').value.toLowerCase();
-  const items = db[state.current].filter(e => !q || Object.values(e).some(v => String(v).toLowerCase().includes(q)));
+  const items = (db[state.current]||[]).filter(e => !q || Object.values(e).some(v => String(v).toLowerCase().includes(q)));
   const list = document.getElementById('sidebarList');
   if (!items.length) {
     list.innerHTML = `<div style="padding:1.5rem 1rem;color:rgba(245,237,224,.3);font-style:italic;font-size:.9rem;text-align:center;">No entries yet</div>`;
