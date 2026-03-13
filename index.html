@@ -183,6 +183,18 @@
   .map-hint{position:absolute;bottom:1.2rem;left:1.2rem;font-family:'Rajdhani',sans-serif;font-size:.7rem;letter-spacing:.1em;color:rgba(245,237,224,.2);z-index:10;}
   .badge-main{background:rgba(201,150,58,.18);color:var(--gold);border:1px solid rgba(201,150,58,.3);}
   .badge-side{background:rgba(100,130,180,.15);color:rgba(150,185,230,.8);border:1px solid rgba(100,130,180,.25);}
+  .badge-morning  {background:rgba(232,184,75,.15);color:#e8c84b;border:1px solid rgba(232,184,75,.35);}
+  .badge-afternoon{background:rgba(196,90,26,.2);color:#e8a070;border:1px solid rgba(232,160,112,.35);}
+  .badge-night    {background:rgba(60,50,120,.4);color:#a090e8;border:1px solid rgba(160,144,232,.35);}
+  .badge-any      {background:rgba(44,51,64,.6);color:#9ab0c8;border:1px solid rgba(154,176,200,.3);}
+
+  /* SIDEBAR FILTERS */
+  .sidebar-filter{padding:.6rem .9rem;border-bottom:1px solid rgba(201,150,58,.1);}
+  .filter-label{font-family:'Rajdhani',sans-serif;font-size:.62rem;font-weight:700;letter-spacing:.2em;text-transform:uppercase;color:rgba(201,150,58,.4);margin-bottom:.4rem;}
+  .filter-chips{display:flex;flex-wrap:wrap;gap:.3rem;}
+  .filter-chip{font-family:'Rajdhani',sans-serif;font-size:.68rem;font-weight:600;letter-spacing:.1em;text-transform:uppercase;padding:.2rem .55rem;border-radius:2px;border:1px solid rgba(201,150,58,.18);background:rgba(245,237,224,.04);color:rgba(245,237,224,.4);cursor:pointer;transition:all .15s;}
+  .filter-chip:hover{background:rgba(201,150,58,.12);color:var(--gold-light);border-color:rgba(201,150,58,.35);}
+  .filter-chip.active{background:rgba(201,150,58,.2);border-color:rgba(201,150,58,.55);color:var(--gold);}
 
   /* ── DASHBOARD ── */
   .dashboard{padding:1.5rem 2rem;overflow-y:auto;height:100%;}
@@ -262,11 +274,13 @@
   <button class="nav-tab" data-section="quests" onclick="switchSection('quests')">📜 Quests <span class="tab-count" id="count-quests">0</span></button>
   <button class="nav-tab" data-section="sessions" onclick="switchSection('sessions')">📖 Sessions <span class="tab-count" id="count-sessions">0</span></button>
   <button class="nav-tab" data-section="map" onclick="switchSection('map')">🗺 Map</button>
+  <button class="nav-tab" data-section="cocktails" onclick="switchSection('cocktails')">🍹 Cocktails <span class="tab-count" id="count-cocktails">0</span></button>
 </nav>
 
 <main>
   <aside class="sidebar">
     <div class="sidebar-search"><input class="search-input" id="searchInput" type="text" placeholder="Search…" oninput="renderSidebar()"></div>
+    <div id="sidebarFilters"></div>
     <div class="sidebar-list" id="sidebarList"></div>
     <button class="btn-add-sidebar" id="addBtn" onclick="startNew()" style="display:none;">＋ Add New</button>
   </aside>
@@ -396,6 +410,16 @@ const SCHEMA = {
       {key:'tags',label:'Tags',type:'text'},
     ]},
   map:{label:'Map',plural:'Map',icon:'🗺',badge:()=>'',sub:()=>'',fields:[]},
+  cocktails:{label:'Cocktail',plural:'Cocktails',icon:'🍹',badge:e=>e.timeOfDay||'any',sub:e=>e.spirit||'',
+    fields:[
+      {key:'name',label:'Name',type:'text',required:true},
+      {key:'spirit',label:'Base Spirit',type:'text'},
+      {key:'timeOfDay',label:'Time of Day',type:'select',options:['morning','afternoon','night']},
+      {key:'recipe',label:'Recipe',type:'textarea'},
+      {key:'effects',label:'Effects / Vibe',type:'textarea'},
+      {key:'notes',label:'Notes',type:'textarea'},
+      {key:'tags',label:'Tags (comma-separated)',type:'text'},
+    ]},
   sessions:{label:'Session',plural:'Sessions',icon:'📖',badge:e=>e.number?`#${e.number}`:'—',sub:e=>e.date||'',
     fields:[
       {key:'name',label:'Session Title',type:'text',required:true},
@@ -412,12 +436,21 @@ const SCHEMA = {
     ]},
 };
 
+// ── FILTER CONFIG ───────────────────────────────────────────────────────
+const SECTION_FILTERS = {
+  npcs:     {label:'Attitude',    field:'attitude',  options:['ally','neutral','hostile','unknown']},
+  factions: {label:'Standing',    field:'standing',  options:['ally','neutral','hostile','unknown']},
+  quests:   {label:'Status',      field:'status',    options:['rumor','active','complete','failed']},
+  cocktails:{label:'Time of Day', field:'timeOfDay', options:['morning','afternoon','night']},
+  locations:{label:'Region',      field:'region',    options:null}, // derived from data
+};
+
 // ── STATE ───────────────────────────────────────────────────────────────
 const CFG_KEY = 'dh_codex_cfg3';
 // Everyone is read-only by default. GM unlocks via password.
 let IS_GM = false;
-let db = {npcs:[],factions:[],locations:[],quests:[],sessions:[],map:[]};
-let state = {current:'home',selected:null,editing:false,mapZoom:1,mapX:0,mapY:0};
+let db = {npcs:[],factions:[],locations:[],quests:[],sessions:[],map:[],cocktails:[]};
+let state = {current:'home',selected:null,editing:false,mapZoom:1,mapX:0,mapY:0,filters:{}};
 // ── PUBLIC CREDENTIALS (safe to embed — anon/read key only) ─────────────
 // These are set when you use Settings → Publish to Netlify.
 // Players use these to connect without any setup.
@@ -544,26 +577,7 @@ async function saveSetup() {
   setMsg('Connected!', 'ok');
   setTimeout(() => {
     document.getElementById('setupOverlay').style.display = 'none';
-    function fmtInsert(id, before, after) {
-  var ta = document.getElementById(id);
-  if (!ta) return;
-  var s = ta.selectionStart, e = ta.selectionEnd, sel = ta.value.slice(s,e);
-  ta.value = ta.value.slice(0,s) + before + (sel||'text') + after + ta.value.slice(e);
-  ta.selectionStart = s + before.length;
-  ta.selectionEnd = s + before.length + (sel||'text').length;
-  ta.focus();
-}
-function fmtBullet(id, type) {
-  var ta = document.getElementById(id);
-  if (!ta) return;
-  var s = ta.selectionStart;
-  var ls = ta.value.lastIndexOf('\n', s-1) + 1;
-  var pre = type === 'ul' ? '- ' : '1. ';
-  ta.value = ta.value.slice(0,ls) + pre + ta.value.slice(ls);
-  ta.selectionStart = ta.selectionEnd = ls + pre.length;
-  ta.focus();
-}
-init();
+    init();
   }, 600);
 }
 
@@ -814,6 +828,8 @@ function switchSection(section) {
     sidebar.style.display = 'none';
     panel.style.padding = '0';
     panel.style.overflow = 'hidden';
+    const sf = document.getElementById('sidebarFilters');
+    if (sf) sf.innerHTML = '';
   } else {
     sidebar.style.display = '';
     panel.style.padding = '';
@@ -826,8 +842,15 @@ function renderSidebar() {
   if (state.current === 'home' || state.current === 'map') return;
   const schema = SCHEMA[state.current];
   if (!schema) return;
+  renderFilters();
   const q = document.getElementById('searchInput').value.toLowerCase();
-  const items = (db[state.current]||[]).filter(e => !q || Object.values(e).some(v => String(v).toLowerCase().includes(q)));
+  const filterCfg = SECTION_FILTERS[state.current];
+  const filterVal = filterCfg ? (state.filters[state.current] || '') : '';
+  const items = (db[state.current]||[]).filter(e => {
+    if (q && !Object.values(e).some(v => String(v).toLowerCase().includes(q))) return false;
+    if (filterVal && (e[filterCfg.field]||'').toLowerCase() !== filterVal) return false;
+    return true;
+  });
   const list = document.getElementById('sidebarList');
   if (!items.length) {
     list.innerHTML = `<div style="padding:1.5rem 1rem;color:rgba(245,237,224,.3);font-style:italic;font-size:.9rem;text-align:center;">No entries yet</div>`;
@@ -854,6 +877,53 @@ function renderSidebar() {
 
 function selectItem(id) { state.selected=id; state.editing=false; renderSidebar(); renderDetail(); }
 function startNew()     { state.selected=null; state.editing=true;  renderSidebar(); renderDetail(); }
+
+function setFilter(section, value) {
+  state.filters[section] = value;
+  renderFilters();
+  renderSidebar();
+}
+
+function renderFilters() {
+  const container = document.getElementById('sidebarFilters');
+  if (!container) return;
+  const section = state.current;
+  const cfg = SECTION_FILTERS[section];
+  if (!cfg) { container.innerHTML = ''; return; }
+  let opts = cfg.options;
+  if (!opts) {
+    opts = [...new Set((db[section]||[]).map(e => e[cfg.field]||'').filter(Boolean))].sort();
+    if (!opts.length) { container.innerHTML = ''; return; }
+  }
+  const active = state.filters[section] || '';
+  container.innerHTML = `<div class="sidebar-filter">
+    <div class="filter-label">${cfg.label}</div>
+    <div class="filter-chips">
+      <button class="filter-chip${!active?' active':''}" onclick="setFilter('${section}','')">All</button>
+      ${opts.map(o=>`<button class="filter-chip${active===o?' active':''}" onclick="setFilter('${section}','${o}')">${o.charAt(0).toUpperCase()+o.slice(1)}</button>`).join('')}
+    </div>
+  </div>`;
+}
+
+function fmtInsert(id, before, after) {
+  var ta = document.getElementById(id);
+  if (!ta) return;
+  var s = ta.selectionStart, e = ta.selectionEnd, sel = ta.value.slice(s,e);
+  ta.value = ta.value.slice(0,s) + before + (sel||'text') + after + ta.value.slice(e);
+  ta.selectionStart = s + before.length;
+  ta.selectionEnd = s + before.length + (sel||'text').length;
+  ta.focus();
+}
+function fmtBullet(id, type) {
+  var ta = document.getElementById(id);
+  if (!ta) return;
+  var s = ta.selectionStart;
+  var ls = ta.value.lastIndexOf('\n', s-1) + 1;
+  var pre = type === 'ul' ? '- ' : '1. ';
+  ta.value = ta.value.slice(0,ls) + pre + ta.value.slice(ls);
+  ta.selectionStart = ta.selectionEnd = ls + pre.length;
+  ta.focus();
+}
 
 function renderDetail() {
   const panel = document.getElementById('detailPanel');
@@ -919,8 +989,8 @@ function renderView(entry, schema) {
     </div>
     ${mainFields.some(f=>entry[f.key])?`<div class="fields-grid">${mainFields.filter(f=>entry[f.key]).map(f=>`<div class="field"><div class="field-label">${f.label}</div><div class="field-value">${esc(entry[f.key])}</div></div>`).join('')}</div>`:''}
     ${tags.length?`<div class="field" style="margin-bottom:1.25rem;"><div class="field-label">Tags</div><div class="tags-display">${tags.map(t=>`<span class="tag">${esc(t)}</span>`).join('')}</div></div>`:''}
-    ${pubText.map(f=>entry[f.key]?`<div class="ornament-divider">✦</div><div class="field full"><div class="field-label">${f.label}</div><div class="field-value">${esc(entry[f.key])}</div></div>`:'').join('')}
-    ${gmText.length&&gmText.some(f=>entry[f.key])?`<div class="ornament-divider">✦</div><div class="gm-section"><div class="gm-section-label">GM Eyes Only</div>${gmText.map(f=>entry[f.key]?`<div class="field full" style="margin-bottom:.75rem;"><div class="field-label">${f.label}</div><div class="field-value">${esc(entry[f.key])}</div></div>`:'').join('')}</div>`:''}
+    ${pubText.map(f=>entry[f.key]?`<div class="ornament-divider">✦</div><div class="field full"><div class="field-label">${f.label}</div><div class="field-value">${renderMd(entry[f.key])}</div></div>`:'').join('')}
+    ${gmText.length&&gmText.some(f=>entry[f.key])?`<div class="ornament-divider">✦</div><div class="gm-section"><div class="gm-section-label">GM Eyes Only</div>${gmText.map(f=>entry[f.key]?`<div class="field full" style="margin-bottom:.75rem;"><div class="field-label">${f.label}</div><div class="field-value">${renderMd(entry[f.key])}</div></div>`:'').join('')}</div>`:''}
   `;
 }
 
