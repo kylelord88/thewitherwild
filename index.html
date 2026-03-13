@@ -187,6 +187,8 @@
   .badge-afternoon{background:rgba(196,90,26,.2);color:#e8a070;border:1px solid rgba(232,160,112,.35);}
   .badge-night    {background:rgba(60,50,120,.4);color:#a090e8;border:1px solid rgba(160,144,232,.35);}
   .badge-any,.badge-anytime{background:rgba(44,51,64,.6);color:#9ab0c8;border:1px solid rgba(154,176,200,.3);}
+  .badge-alive   {background:rgba(26,92,26,.3);color:#80cf80;border:1px solid rgba(128,207,128,.3);}
+  .badge-deceased{background:rgba(50,50,60,.5);color:#9090a8;border:1px solid rgba(144,144,168,.25);}
 
   /* SIDEBAR FILTERS */
   .sidebar-filter{padding:.6rem .9rem;border-bottom:1px solid rgba(201,150,58,.1);}
@@ -358,6 +360,7 @@ const SCHEMA = {
       {key:'name',label:'Name',type:'text',required:true},
       {key:'role',label:'Role / Occupation',type:'text'},
       {key:'attitude',label:'Attitude',type:'select',options:['ally','neutral','hostile','unknown']},
+      {key:'vitality',label:'Vitality',type:'select',options:['alive','deceased']},
       {key:'faction',label:'Faction',type:'text'},
       {key:'location',label:'Last Known Location',type:'text'},
       {key:'appearance',label:'Appearance',type:'textarea'},
@@ -870,7 +873,9 @@ function renderSidebar() {
     const sub = schema.sub(e);
     const badgeClass = 'badge-' + badge.toLowerCase().replace(/[^a-z]/g,'');
     const typeBadge = (state.current === 'quests' && e.questType)
-      ? `<span class="sidebar-item-badge badge-${e.questType}">${cap(e.questType)}</span>` : '';
+      ? `<span class="sidebar-item-badge badge-${e.questType}">${cap(e.questType)}</span>`
+      : (state.current === 'npcs' && e.vitality)
+      ? `<span class="sidebar-item-badge badge-${e.vitality}">${cap(e.vitality)}</span>` : '';
     return `<div class="sidebar-item${e.id===state.selected?' active':''}" onclick="selectItem('${e.id}')">
       <div>
         <div class="sidebar-item-name">${esc(e.name||'Unnamed')}</div>
@@ -1129,7 +1134,7 @@ function renderDashboard(panel) {
           <div>
             <div class="dash-item-name">${esc(n.name||'Unnamed')}</div>
             ${n.role?`<div class="dash-item-sub">${esc(n.role)}</div>`:''}
-            ${n.attitude?`<div class="dash-badges"><span class="sidebar-item-badge badge-${n.attitude}">${n.attitude}</span></div>`:''}
+            <div class="dash-badges">${n.attitude?`<span class="sidebar-item-badge badge-${n.attitude}">${cap(n.attitude)}</span>`:''} ${n.vitality?`<span class="sidebar-item-badge badge-${n.vitality}">${cap(n.vitality)}</span>`:''}</div>
           </div>
         </div>`).join('')
     : '<div class="dash-empty">No NPCs yet</div>';
