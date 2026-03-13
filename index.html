@@ -846,11 +846,20 @@ function renderSidebar() {
   const q = document.getElementById('searchInput').value.toLowerCase();
   const filterCfg = SECTION_FILTERS[state.current];
   const filterVal = filterCfg ? (state.filters[state.current] || '') : '';
-  const items = (db[state.current]||[]).filter(e => {
+  let items = (db[state.current]||[]).filter(e => {
     if (q && !Object.values(e).some(v => String(v).toLowerCase().includes(q))) return false;
     if (filterVal && (e[filterCfg.field]||'').toLowerCase() !== filterVal) return false;
     return true;
   });
+  if (state.current === 'quests') {
+    const statusOrder = {active:0, rumor:1, failed:2, complete:3};
+    const typeOrder   = {main:0, side:1};
+    items = items.slice().sort((a, b) => {
+      const sd = (statusOrder[a.status||'rumor']??1) - (statusOrder[b.status||'rumor']??1);
+      if (sd !== 0) return sd;
+      return (typeOrder[a.questType||'side']??1) - (typeOrder[b.questType||'side']??1);
+    });
+  }
   const list = document.getElementById('sidebarList');
   if (!items.length) {
     list.innerHTML = `<div style="padding:1.5rem 1rem;color:rgba(245,237,224,.3);font-style:italic;font-size:.9rem;text-align:center;">No entries yet</div>`;
